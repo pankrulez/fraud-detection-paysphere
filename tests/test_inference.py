@@ -1,0 +1,49 @@
+import pandas as pd
+from src.modeling.inference import FraudScorer
+
+
+def test_inference_single_row():
+    scorer = FraudScorer(
+        model_path="models/artifacts/fraud_model.joblib",
+        encoders_path="models/encoders/preprocessing.joblib",
+        threshold=0.5,
+    )
+
+    df_input = pd.DataFrame(
+        [
+            {
+                "transaction_id": 0,
+                "customer_id": 0,
+                "device_id": 0,
+                "merchant_id": 0,
+                "timestamp": "2024-01-01 00:00:00",
+                "amount": 1000.0,
+                "payment_method": "UPI",
+                "is_international": 0,
+                "merchant_category": "Electronics",
+                "ip_address_risk_score": 0.2,
+                "device_trust_score": 0.8,
+                "velocity_1h": 1,
+                "velocity_24h": 3,
+                "velocity_7d": 10,
+                "customer_tenure_days": 200,
+                "historical_fraud_rate": 0.0,
+                "merchant_historical_fraud_rate": 0.05,
+                "ip_address_country_match": 1,
+                "previous_chargeback_count": 0,
+                "time_of_day": 12,
+                "day_of_week": 2,
+                "is_weekend": 0,
+                "location_risk_score": 0.1,
+                "transaction_success_rate_customer": 0.98,
+                "is_fraud": 0,
+            }
+        ]
+    )
+
+    prob = scorer.predict_proba(df_input)
+    label, action = scorer.predict_label_and_action(df_input)
+
+    assert 0.0 <= prob <= 1.0
+    assert label in [0, 1]
+    assert action in ["HARD_BLOCK", "OTP_CHALLENGE", "SOFT_REVIEW", "ALLOW"]

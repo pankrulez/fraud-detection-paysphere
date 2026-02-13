@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paysphere-fraud-detection"
+version = "0.1.0"
+description = "End-to-end fraud detection pipeline and Streamlit app for PaySphere."
+authors = [{ name = "Your Name", email = "you@example.com" }]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "pandas",
+    "numpy",
+    "scikit-learn",
+    "imblearn",
+    "xgboost",
+    "streamlit",
+    "pyyaml",
+    "joblib",
+    "python-dotenv",
+    "loguru",
+]
+
+[tool.setuptools]
+packages = ["src", "app"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39"]
+
+[tool.isort]
+profile = "black"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.9"
+ignore_missing_imports = true

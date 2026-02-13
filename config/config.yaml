@@ -1,0 +1,16 @@
+data: 
+  raw_path: "data/raw/transactions_fraud.csv" 
+  interim_path: "data/interim/transactions_clean.csv" 
+  processed_path: "data/processed/transactions_features.csv"
+
+model: 
+  target_column: "is_fraud" 
+  test_size: 0.2 
+  random_state: 42 
+  algorithm: "xgboost"
+
+threshold: 
+  fraud_cutoff: 0.5 
+
+logging: 
+  config_file: "config/logging.yaml"
