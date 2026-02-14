@@ -4,6 +4,7 @@ numpy>=1.26
 scikit-learn>=1.3
 imbalanced-learn>=0.12
 scipy>=1.11
+xgboost==2.0.3
 
 # Visualization & app
 matplotlib>=3.8
