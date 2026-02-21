@@ -3,33 +3,27 @@
 ![Pytest Status](https://github.com/pankrulez/fraud-detection-paysphere/actions/workflows/main.yml/badge.svg)
 
 
-Real-time fraud detection system for a digital payments provider (UPI, cards, net banking, wallets).  
-The project implements an end‑to‑end ML pipeline — from raw transactions to a Streamlit app for live scoring and fraud analytics.
+Real-time fraud detection system for digital payments (UPI, cards, wallets).
+
+End-to-end ML pipeline → trained model → production-style artifacts → Streamlit app for live scoring.
 
 ---
 
-## 🚀 Key Features
+## 🚀 What This Project Demonstrates
 
-- **End‑to‑end ML pipeline**
-  - Data ingestion and schema validation
-  - Feature engineering with behavioural and risk‑based signals
-  - Class‑imbalance handling using SMOTE
-  - Model training, evaluation, and threshold tuning
+- End-to-end ML pipeline (data → features → model → artifacts)
 
-- **Production‑style architecture**
-  - Clear module structure under `src/`
-  - Versioned model & preprocessing artifacts (`joblib`)
-  - Inference wrapper (`FraudScorer`) for real‑time scoring
+- Class imbalance handling (SMOTE)
 
-- **Interactive Streamlit app**
-  - **Overview**: business and technical context
-  - **Live Scoring**: score a single transaction and get recommended action
-  - **Analytics & Plots**: class balance, temporal patterns, behavioural signals
-  - **Project Pipeline**: step‑by‑step architecture walkthrough
+- Threshold-based fraud decisioning
 
-- **Testing & CI‑ready**
-  - `pytest` tests for ingestion, features, training, inference
-  - Structure designed to plug into GitHub Actions for CI
+- Clean modular architecture (src/ structure)
+
+- Artifact versioning (model + preprocessing)
+
+- Interactive fraud analytics dashboard
+
+- Unit tests with pytest
 
 ---
 
@@ -83,261 +77,110 @@ fraud-detection-paysphere/
 └── README.md
 ```
 
-## 📦 Installation
-1. Clone the repository
+## 📦 Run It Locally
+1️⃣ Install
+
 ```bash
 git clone https://github.com/<your-username>/fraud-detection-paysphere.git
 
 cd fraud-detection-paysphere
-```
 
-2. Create and activate a virtual environment
-```bash
 python -m venv .venv
 
-# Windows
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
-.venv\Scripts\activate
-
-# macOS / Linux
-
-source .venv/bin/activate
-```
-
-3. Install dependencies
-```bash
 pip install -r requirements.txt
 ```
 
-## 🧪 Running Tests
-The project uses `pytest` for unit/integration tests.
-
-```bash
-pytest
-```
-
-This will run:
-
-- `test_data_ingestion.py` – schema checks & business rules on the input CSV
-
-- `test_feature_engineering.py` – behavioural / risk feature creation
-
-- `test_model_training.py` – end‑to‑end training pipeline with SMOTE
-
-- `test_inference.py` – loading artifacts and scoring a single transaction
-
-All tests should pass once you’ve run the training pipeline at least once (see below).
-
-## 🔁 Training Pipeline (Data → Model → Artifacts)
-To run the full ML pipeline (ingestion → features → training → artifacts):
+2️⃣ Train Model
 
 ```bash
 python -m src.pipeline.run_pipeline
 ```
-This will:
 
-1. Read raw data from `data/raw/transactions_fraud.csv`.
+Artifacts saved:
 
-2. Validate schema & rules and save a cleaned version to:
+- `models/artifacts/fraud_model.joblib`
 
-- `data/interim/transactions_clean.csv`
+- `models/encoders/preprocessing.joblib`
 
-3. Engineer features (velocity, spend deviation, history, combined risk index) and handle class imbalance with SMOTE.
-
-4. Train a tree‑based model (e.g., RandomForest) and evaluate:
-
-- ROC AUC
-
-- PR AUC
-
-- Precision & recall at configured threshold
-
-5. Save outputs:
-
-- Test‑set features + predictions → `data/processed/transactions_features.csv`
-
-- Model artifact → `models/artifacts/fraud_model.joblib`
-
-- Preprocessing pipeline → `models/encoders/preprocessing.joblib`
-
-These artifacts are then used by the Streamlit app for interactive scoring.
-
-## 🖥️ Running the Streamlit App (Local)
-From the project root:
+3️⃣ Launch App
 
 ```bash
 streamlit run app/app.py
 ```
 
-The app exposes four views (in the sidebar):
+## 🖥 Streamlit App Features
 
-1. **Overview**
+- **Live Scoring**
 
-- Business motivation for fraud detection
+    - Enter transaction attributes
 
-- Sample dataset stats (transactions, fraud rate)
+    - Get fraud probability
 
-- High‑level business, ML, and MLOps highlights
+    - Business action: ALLOW / REVIEW / BLOCK
 
-2. **Live Scoring**
+- **Fraud Analytics**
 
-- Form for entering a single transaction’s attributes:
+    - Class distribution
 
-    - Amount, payment method, merchant category, international flag
+    - Temporal fraud patterns
 
-    - IP address risk score, device trust score
+    - Risk signal visualization
 
-    - 24h velocity, average amount, merchant diversity
+    - Behavioural insights
 
-    - Past fraud & disputes, merchant historical fraud rate
+- **Pipeline Walkthrough**
 
-- Returns:
+    - Structured explanation of each ML stage
 
-    - Fraud probability
-
-    - Binary label (FRAUD / GENUINE)
-
-    - Recommended action (ALLOW / SOFT_REVIEW / OTP_CHALLENGE / HARD_BLOCK)
-
-- Uses the `FraudScorer` wrapper around saved model + encoders.
-
-3. **Analytics & Plots**
-
-- Class distribution (fraud vs genuine)
-
-- Amount distributions by label
-
-- Fraud rate by payment method and merchant category
-
-- Temporal patterns (hour of day, weekday vs weekend)
-
-- Behavioural & risk signals:
-
-    - IP risk vs device trust (scatter plot)
-
-    - Transaction count last 24h vs fraud
-
-Each chart includes a short explanation to help stakeholders interpret the pattern.
-
-4. **Project Pipeline**
-
-- Slide‑free architecture walkthrough of the system:
-
-    1. Data ingestion & validation
-
-    2. Feature engineering & behavioural signals
-
-    3. Imbalance handling & model training
-
-    4. Model serialization & versioned artifacts
-
-    5. Real‑time scoring & decisioning
-
-    6. Testing, CI/CD & Streamlit UI
-
-- Each step is shown as a styled card with:
-
-    - What happens
-
-    - Which files/modules are involved
-
-    - The key question that step answers (e.g. “Is the data reliable enough to take risk decisions on?”)
-
-## ⚙️ Configuration
-Project settings are stored in `config/config.yaml`, e.g.:
-
-You can tune:
-
-- **Paths** to raw/interim/processed data
-
-- **Model config** (algorithm, train/test split)
-
-- **Decision threshold** (fraud_cutoff) that maps probabilities to labels/actions
+---
 
 ## 🧠 Feature Engineering Highlights
-Some of the key engineered features:
 
-- **Velocity & activity**
+- Transaction velocity signals
 
-    - Approximate `velocity_1h`, `velocity_24h`, `velocity_7d` from `txn_count_last_24h`
+- Amount deviation from customer baseline
 
-    - Transaction count bursts as indicators of bots or account takeover
+- Device & IP risk indicators
 
-- **Customer behaviour**
+- Historical fraud patterns
 
-    - `amount_deviation`: difference between transaction amount and customer’s typical average
+- Combined risk index
 
-    - `transaction_success_rate_customer` proxy from OTP success rate
+---
 
-- **Device & network risk**
+## 📊 Model
 
-    - Device‑customer sharing count (how many customers use the same device)
+- Tree-based classifier (RandomForest)
 
-    - IP address risk score
+- SMOTE for imbalance
 
-    - Device trust score
+- ROC AUC & PR AUC evaluation
 
-- **Historical fraud patterns**
+- Configurable fraud decision threshold
 
-    - Customer‑level and merchant‑level fraud/dispute indicators
+---
 
-    - Synthetic `historical_fraud_rate` derived from past fraud + disputes
+## 🧪 Running Tests
 
-- **Combined risk index**
+```bash
+pytest
+```
+Covers ingestion, feature engineering, training, and inference.
 
-    - Weighted combination of IP risk, device trust, customer history, and merchant history
-
-## 🔍 Model & Evaluation
-- **Model**: Tree‑based classifier (e.g., RandomForest) on engineered feature set
-
-- **Imbalance handling**: SMOTE (oversampling minority fraud class)
-
-- **Metrics**:
-
-    - ROC AUC & PR AUC for ranking performance
-
-    - Precision & recall at business‑aligned threshold
-
-- **Threshold & actions**
-
-## 🧪 CI/CD
-The project is structured to work with GitHub Actions:
-
-- On each push:
-
-    - Install dependencies
-
-    - Run `pytest`
-
-- Optionally:
-
-    - Run `python -m src.pipeline.run_pipeline` on new data
-
-    - Trigger a redeploy of the Streamlit app
-
-Add a `.github/workflows/ci.yml`
+---
 
 ## 📌 Future Improvements
-- Model explainability (SHAP/feature attribution in the app)
 
-- Drift monitoring & automatic retraining
+- Model explainability (SHAP)
 
-- Multiple model candidates (baseline vs advanced)
+- Drift monitoring
 
-- API layer around FraudScorer (FastAPI / Flask) for integration with other systems
+- API layer (FastAPI)
+
+- Multiple model comparison
 
 ## 📄 License
-MIT License
 
-## 🙌 Acknowledgements
-- Ideas inspired by public fraud detection examples and SMOTE‑based pipelines.
-
-- Built with:
-
-    - Streamlit for the UI
-
-    - scikit‑learn
-
-    - imbalanced‑learn / SMOTE
-
-    - pytest for testing
+MIT
