@@ -1,19 +1,18 @@
 from unittest.mock import patch, MagicMock
 import pandas as pd
+import numpy as np
 from src.modeling.inference import FraudScorer
 
-# Change the patch target to just "joblib.load"
 @patch("joblib.load") 
 def test_inference_single_row(mock_load):
     # Setup Mock Model
     mock_model = MagicMock()
-    mock_model.predict_proba.return_value = [[0.8, 0.2]]
-    mock_model.predict.return_value = [0]
+    # Use np.array to support slice indexing like [:, 1]
+    mock_model.predict_proba.return_value = np.array([[0.8, 0.2]]) 
+    mock_model.predict.return_value = np.array([0])
     
     # Setup Mock Encoder
     mock_encoder = MagicMock()
-    
-    # Return model first, then encoder
     mock_load.side_effect = [mock_model, mock_encoder]
 
     scorer = FraudScorer(
