@@ -1,5 +1,8 @@
 # PaySphere Online Payment Fraud Detection
 
+![Pytest Status](https://github.com/pankrulez/fraud-detection-paysphere/actions/workflows/<WORKFLOW_FILENAME>/badge.svg)
+
+
 Real-time fraud detection system for a digital payments provider (UPI, cards, net banking, wallets).  
 The project implements an end‑to‑end ML pipeline — from raw transactions to a Streamlit app for live scoring and fraud analytics.
 
