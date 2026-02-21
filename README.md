@@ -1,6 +1,6 @@
 # PaySphere Online Payment Fraud Detection
 
-![Pytest Status](https://github.com/pankrulez/fraud-detection-paysphere/actions/workflows/<WORKFLOW_FILENAME>/badge.svg)
+![Pytest Status](https://github.com/pankrulez/fraud-detection-paysphere/actions/workflows/main.yml/badge.svg)
 
 
 Real-time fraud detection system for a digital payments provider (UPI, cards, net banking, wallets).  
