@@ -2,24 +2,23 @@ from unittest.mock import patch, MagicMock
 import pandas as pd
 from src.modeling.inference import FraudScorer
 
-@patch("src.modeling.inference.joblib.load") # Patch exactly where it is imported
+# Change the patch target to just "joblib.load"
+@patch("joblib.load") 
 def test_inference_single_row(mock_load):
     # Setup Mock Model
     mock_model = MagicMock()
-    # Scikit-learn's predict_proba returns a 2D array: [[prob_0, prob_1]]
-    mock_model.predict_proba.return_value = [[0.2, 0.8]] 
-    mock_model.predict.return_value = [1]
+    mock_model.predict_proba.return_value = [[0.8, 0.2]]
+    mock_model.predict.return_value = [0]
     
     # Setup Mock Encoder
     mock_encoder = MagicMock()
     
-    # Define what joblib.load returns sequentially
+    # Return model first, then encoder
     mock_load.side_effect = [mock_model, mock_encoder]
 
     scorer = FraudScorer(
         model_path="models/artifacts/fraud_model.joblib",
         encoders_path="models/encoders/preprocessing.joblib",
-        threshold=0.5,
     )
 
     df_input = pd.DataFrame([{
