@@ -1,23 +1,21 @@
-import pandas as pd
 from unittest.mock import patch, MagicMock
+import pandas as pd
 from src.modeling.inference import FraudScorer
 
-@patch("joblib.load") # This intercepts joblib.load inside FraudScorer
+@patch("src.modeling.inference.joblib.load") # Patch exactly where it is imported
 def test_inference_single_row(mock_load):
-    # 1. Setup Mock Objects
-    # We simulate a model that has a predict_proba method
+    # Setup Mock Model
     mock_model = MagicMock()
-    mock_model.predict_proba.return_value = [[0.1, 0.9]] # Simulates 90% fraud probability
+    # Scikit-learn's predict_proba returns a 2D array: [[prob_0, prob_1]]
+    mock_model.predict_proba.return_value = [[0.2, 0.8]] 
+    mock_model.predict.return_value = [1]
     
-    # We simulate encoders (can just be a dummy object)
+    # Setup Mock Encoder
     mock_encoder = MagicMock()
+    
+    # Define what joblib.load returns sequentially
+    mock_load.side_effect = [mock_model, mock_encoder]
 
-    # Define what joblib.load returns each time it's called
-    # First call (model_path) -> mock_model
-    # Second call (encoders_path) -> mock_encoder
-    mock_load.side_effects = [mock_model, mock_encoder]
-
-    # 2. Initialize Scorer (it won't crash now because joblib.load is mocked)
     scorer = FraudScorer(
         model_path="models/artifacts/fraud_model.joblib",
         encoders_path="models/encoders/preprocessing.joblib",
@@ -35,11 +33,11 @@ def test_inference_single_row(mock_load):
         "transaction_success_rate_customer": 0.98, "is_fraud": 0,
     }])
 
-    # 3. Run Inference
+    # Force the return values to be standard types to avoid MagicMock formatting errors
     prob = scorer.predict_proba(df_input)
     label, action = scorer.predict_label_and_action(df_input)
 
-    # 4. Assertions
+    assert isinstance(prob, (float, int))
     assert 0.0 <= prob <= 1.0
     assert label in [0, 1]
     assert action in ["HARD_BLOCK", "OTP_CHALLENGE", "SOFT_REVIEW", "ALLOW"]
