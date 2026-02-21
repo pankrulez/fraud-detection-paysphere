@@ -27,3 +27,12 @@ jobs:
       - name: Run tests
         run: |
           pytest -q
+
+      - name: Debug Project Structure (Always Run)
+        if: always() # This ensures it runs even if tests fail
+        run: |
+          echo "=== Project Directory Tree ==="
+          ls -R
+          echo "=== Checking specific files ==="
+          [ -f data/raw/transactions_fraud.csv ] && echo "Data CSV exists" || echo "Data CSV MISSING"
+          [ -f models/artifacts/fraud_model.joblib ] && echo "Model joblib exists" || echo "Model joblib MISSING"
