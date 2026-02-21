@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest
+import os
 
 
 @pytest.fixture
@@ -38,3 +39,22 @@ def sample_dataframe():
     }
     df = pd.DataFrame(data)
     return df
+
+@pytest.fixture
+def setup_test_data(sample_dataframe):
+    """Creates the local directory and CSV file needed for tests."""
+    # Define the path expected by the test
+    raw_dir = "data/raw"
+    raw_path = os.path.join(raw_dir, "transactions_fraud.csv")
+    
+    # Create directory if it doesn't exist
+    os.makedirs(raw_dir, exist_ok=True)
+    
+    # Save the mock dataframe to that path
+    sample_dataframe.to_csv(raw_path, index=False)
+    
+    yield raw_path # Provide the path to the test
+    
+    # Optional: Clean up after the test is done
+    if os.path.exists(raw_path):
+        os.remove(raw_path)

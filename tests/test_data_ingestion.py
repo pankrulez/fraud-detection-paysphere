@@ -3,7 +3,7 @@ import pandas as pd
 from src.data_ingestion.ingestion import ingest_and_validate
 
 
-def test_ingest_and_validate(tmp_path):
+def test_ingest_and_validate(tmp_path, setup_test_data):
     raw_path = "data/raw/transactions_fraud.csv"
     interim_path = tmp_path / "interim.csv"
 
