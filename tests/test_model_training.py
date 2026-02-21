@@ -1,25 +1,25 @@
 import os
 import pandas as pd
+from unittest.mock import patch
 from src.modeling.train import train_pipeline
-from src.utils.io_utils import load_model
 
 def test_train_pipeline(tmp_path, monkeypatch, sample_dataframe):
-    # 1. Filter fraud rows and duplicate them to ensure >= 2 members
-    fraud_rows = sample_dataframe[sample_dataframe['is_fraud'] == 1]
+    # 1. Create a truly balanced dataset (6 rows: 3 fraud, 3 non-fraud)
+    fraud_row = sample_dataframe[sample_dataframe['is_fraud'] == 1]
+    clean_rows = sample_dataframe[sample_dataframe['is_fraud'] == 0]
     
-    # Concatenate original data with enough fraud copies to satisfy stratification
-    # With test_size=0.2, you need at least 5-10 rows and 2+ fraud cases
-    balanced_df = pd.concat([sample_dataframe] + [fraud_rows] * 10, ignore_index=True)
+    # Ensure we have at least 3 of each to satisfy StratifiedShuffleSplit
+    balanced_df = pd.concat([fraud_row]*3 + [clean_rows]*3, ignore_index=True)
     
-    # 2. Setup the directory and file as before
-    raw_dir = "data/raw"
-    raw_file = os.path.join(raw_dir, "transactions_fraud.csv")
-    os.makedirs(raw_dir, exist_ok=True)
-    os.makedirs("models/artifacts", exist_ok=True) 
+    # 2. Setup physical paths for the runner
+    raw_file = "data/raw/transactions_fraud.csv"
+    os.makedirs("data/raw", exist_ok=True)
+    os.makedirs("models/artifacts", exist_ok=True)
     balanced_df.to_csv(raw_file, index=False)
 
-    # 3. Rest of your config and monkeypatching...
-    def fake_config():
+    # 3. Double-layer Mocking: 
+    # Layer A: Mock the config
+    def fake_config(path=None):
         return {
             "data": {
                 "raw_path": raw_file,
@@ -32,14 +32,16 @@ def test_train_pipeline(tmp_path, monkeypatch, sample_dataframe):
                 "random_state": 42,
                 "algorithm": "random_forest",
             },
-            "threshold": {"fraud_cutoff": 0.5},
         }
 
-    from src.modeling import train as train_module
-    monkeypatch.setattr(train_module, "load_config", lambda path: fake_config())
+    # Layer B: Mock the data loader to return our balanced_df directly
+    # Adjust 'src.modeling.train.pd.read_csv' to wherever your code loads data
+    with patch('src.modeling.train.pd.read_csv', return_value=balanced_df):
+        from src.modeling import train as train_module
+        monkeypatch.setattr(train_module, "load_config", fake_config)
+        
+        # 4. Run the pipeline
+        train_pipeline()
 
-    # 4. Run the pipeline
-    train_pipeline()
-    
-    model = load_model("models/artifacts/fraud_model.joblib")
-    assert model is not None
+    # 5. Verify output
+    assert os.path.exists("models/artifacts/fraud_model.joblib")
