@@ -1,6 +1,12 @@
 # PaySphere Online Payment Fraud Detection
 
 ![Pytest Status](https://github.com/pankrulez/fraud-detection-paysphere/actions/workflows/main.yml/badge.svg)
+![Python 3.10+](https://img.shields.io)
+![Streamlit](https://img.shields.io)
+![Scikit-Learn](https://img.shields.io)
+![Pandas](https://img.shields.io)
+![Code style: black](https://img.shields.io)
+![License: MIT](https://img.shields.io)
 
 
 Real-time fraud detection system for digital payments (UPI, cards, wallets).
