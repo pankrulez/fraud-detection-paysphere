@@ -15,9 +15,9 @@ def render_pipeline():
         (
             "1", "Data Ingestion & Validation", "#3b82f6",
             "Raw transactions from UPI, cards, net banking, and wallets are loaded from "
-            "`transactions_fraud.csv`. We validate schema, enforce business rules (amount "
+            "<code>transactions_fraud.csv</code>. We validate schema, enforce business rules (amount "
             "positivity, temporal ranges, binary flags), and persist clean data to "
-            "`data/interim/transactions_clean.csv` for repeatable experiments.",
+            "<code>data/interim/transactions_clean.csv</code> for repeatable experiments.",
             "Is the data reliable enough to take risk decisions on?",
         ),
         (
@@ -39,8 +39,8 @@ def render_pipeline():
         (
             "4", "Model Serialization & Artifacts", "#3b82f6",
             "The trained model and preprocessing stack are versioned and saved using joblib "
-            "(`models/artifacts/fraud_model.joblib`, "
-            "`models/encoders/preprocessing.joblib`). "
+            "<code>models/artifacts/fraud_model.joblib</code>, "
+            "<code>models/encoders/preprocessing.joblib</code>."
             "The FraudScorer class encapsulates loading, preprocessing, scoring, and mapping "
             "probabilities to actions, making downstream integration simple.",
             "Can we reproduce this model later and reliably deploy the same logic?",
@@ -101,7 +101,7 @@ def render_pipeline():
                         <h4 style="margin-top:0; color:{color};">{title}</h4>
                         <p style="color:#cbd5e1;">{body}</p>
                         <p style="color:#94a3b8; font-size:0.9rem;">
-                            <b>Answers questions like:</b> "{question}"
+                            <b style = "color:{color};">Answers questions like:</b> "{question}"
                         </p>
                     </div>
                     """,

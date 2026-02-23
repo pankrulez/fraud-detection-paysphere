@@ -103,15 +103,11 @@ with st.sidebar:
 
 scorer = load_scorer(threshold)
 
+
 # Header
-st.markdown("""
-<div class="glass-card">
-  <h1>PaySphere Fraud Detection System</h1>
-  <p style="color:#9ca3af;">
-    End-to-end ML-powered risk engine for UPI, cards, net banking, and wallets.
-  </p>
-</div>
-""", unsafe_allow_html=True)
+st.markdown("# PaySphere Fraud Detection System")
+st.markdown("End-to-end ML-powered risk engine for UPI, cards, net banking, and wallets.")
+
 
 st.write("")
 

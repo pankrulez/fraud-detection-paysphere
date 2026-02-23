@@ -92,22 +92,42 @@ def render_analytics(load_sample_data_fn, show_raw: bool, threshold: float, scor
 
     matrix = np.array([[tn, fp],
                        [fn, tp]])
+    
+    col1, col2 = st.columns([3, 2])
+    
+    with col1:
+        fig = ff.create_annotated_heatmap(
+            z=matrix,
+            x=["Predicted Genuine", "Predicted Fraud"],
+            y=["Actual Genuine", "Actual Fraud"],
+            colorscale="Blues",
+            showscale=True,
+        )
 
-    fig = ff.create_annotated_heatmap(
-        z=matrix,
-        x=["Predicted Genuine", "Predicted Fraud"],
-        y=["Actual Genuine", "Actual Fraud"],
-        colorscale="Blues",
-        showscale=True,
-    )
+        fig.update_layout(
+            height=420,
+            title="Model Decision Breakdown",
+            title_font_size=20,
+        )
 
-    fig.update_layout(
-        height=420,
-        title="Model Decision Breakdown",
-        title_font_size=20,
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        st.markdown(
+            """
+            <div style="font-size:17px; color:#cbd5e1;">
+            This matrix shows how many transactions fall into each category:
+            <ul>
+                <li><b style="color:#22c55e;">True Negatives (TN):</b> Genuine transactions correctly identified.</li>
+                <li><b style="color:#ef4444;">False Positives (FP):</b> Genuine transactions incorrectly flagged as fraud.</li>
+                <li><b style="color:#ef4444;">False Negatives (FN):</b> Fraudulent transactions missed by the model.</li>
+                <li><b style="color:#22c55e;">True Positives (TP):</b> Fraudulent transactions correctly flagged.</li>
+            </ul>
+            The balance of these categories reflects the model's performance and the chosen threshold.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     st.markdown("---")
 
@@ -121,34 +141,42 @@ def render_analytics(load_sample_data_fn, show_raw: bool, threshold: float, scor
         .mean()
         .reset_index()
     )
+    col1, col2 = st.columns([3, 2])
+    
+    with col1:
 
-    heatmap = px.density_heatmap(
-        pivot,
-        x="hour_of_day",
-        y="payment_method",
-        z="is_fraud",
-        color_continuous_scale="RdYlGn_r",
-        height=420,
-        title="Fraud Rate by Hour and Payment Method",
-    )
+        heatmap = px.density_heatmap(
+            pivot,
+            x="hour_of_day",
+            y="payment_method",
+            z="is_fraud",
+            color_continuous_scale="RdYlGn_r",
+            height=420,
+            title="Fraud Rate by Hour and Payment Method",
+        )
 
-    heatmap.update_layout(
-        title_font_size=20,
-        xaxis_title="Hour of Day",
-        yaxis_title="Payment Method",
-    )
+        heatmap.update_layout(
+            title_font_size=20,
+            xaxis_title="Hour of Day",
+            yaxis_title="Payment Method",
+        )
 
-    st.plotly_chart(heatmap, use_container_width=True)
+        st.plotly_chart(heatmap, use_container_width=True)
 
-    st.markdown(
-        """
-        <div style="font-size:17px; color:#cbd5e1;">
-        Darker red cells indicate time-payment combinations with elevated fraud risk.
-        This helps identify structured fraud windows (e.g., late-night card abuse).
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    with col2:
+        st.markdown(
+            """
+            <div style="font-size:17px; color:#cbd5e1;">
+            This heatmap reveals high-risk combinations of transaction time and payment method.
+            <ul>
+                <li>Red zones indicate higher fraud rates, guiding real-time risk rules.</li>
+                <li>For example, if UPI transactions spike in fraud during late hours, the system can apply stricter controls during those times.</li>
+                <li>This matrix helps translate model insights into operational strategies.</li>
+            </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     st.markdown("---")
     
@@ -159,7 +187,7 @@ def render_analytics(load_sample_data_fn, show_raw: bool, threshold: float, scor
 
     st.markdown(
         """
-        <p style='font-size:18px; color:#cbd5e1;'>
+        <p style='font-size:15px; color:#cbd5e1;'>
         These charts demonstrate how the fraud model learns patterns from class imbalance,
         transaction amount behavior, temporal spikes, velocity signals, and device/network risk indicators.
         Each visualization reflects a feature signal that directly contributes to real-time scoring decisions.

@@ -127,8 +127,19 @@ def render_overview(load_sample_data_fn):
             </ul>
         </div>
         """, unsafe_allow_html=True)
+    
+    st.write("")
 
-    st.info(
-        "Green = positive business impact. Red = fraud/risk. "
-        "Amber = trade-offs. Blue = system layer. Purple = ML intelligence."
+    st.markdown(
+        """
+        <div style="color:#cbd5e1;">
+            <ul>
+                <li><span style="color:#22c55e;">Green</span> = positive business impact. </li>
+                <li><span style="color:#ef4444;">Red</span> = fraud/risk. </li>
+                <li><span style="color:#f59e0b;">Amber</span> = trade-offs. </li>
+                <li><span style="color:#3b82f6;">Blue</span> = system layer. </li>
+                <li><span style="color:#9333ea;">Purple</span> = ML intelligence. </li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True
     )
