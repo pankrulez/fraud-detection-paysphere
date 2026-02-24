@@ -9,6 +9,7 @@ xgboost==2.0.3
 # Visualization & app
 matplotlib>=3.8
 seaborn>=0.13
+plotly>=5.15
 streamlit>=1.32
 
 # Utilities
