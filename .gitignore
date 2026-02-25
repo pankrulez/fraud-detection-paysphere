@@ -50,8 +50,8 @@ data/processed/*
 !data/.gitkeep
 
 # Models
-models/artifacts/*
-models/encoders/*
+# models/artifacts/*
+# models/encoders/*
 !models/.gitkeep
 
 # Streamlit
