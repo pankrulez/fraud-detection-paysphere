@@ -3,27 +3,31 @@ import streamlit as st
 
 def render_pipeline():
 
-    st.markdown("### End-to-End Fraud Detection Architecture")
+    st.title("Fraud Detection Architecture & Governance")
 
-    steps = [
-        ("1", "Data Ingestion & Validation"),
-        ("2", "Feature Engineering"),
-        ("3", "Imbalance Handling & Training"),
-        ("4", "Model Serialization"),
-        ("5", "Real-Time Decisioning"),
-        ("6", "Testing & CI/CD"),
-    ]
+    st.markdown("""
+    This pipeline is designed for large-scale digital payments where fraud detection,
+    customer experience, and regulatory compliance intersect.
+    """)
 
-    cols = st.columns(2)
+    st.markdown("---")
 
-    for i, (step, title) in enumerate(steps):
-        with cols[i % 2]:
-            st.markdown(f"""
-            <div class="glass-card">
-                <h3>Step {step}: {title}</h3>
-                <p>
-                Modular and reproducible pipeline stage with versioned artifacts
-                and production-ready deployment logic.
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+    stages = {
+        "1. Data Layer":
+            "Transaction ingestion, validation, schema enforcement, data cleaning.",
+        "2. Feature Engineering":
+            "Behavioral velocity, device risk, IP intelligence, merchant history.",
+        "3. Imbalance Strategy":
+            "SMOTE and threshold calibration for severe class imbalance.",
+        "4. Model Training":
+            "Tree-based ensemble classifier optimised for precision-recall trade-off.",
+        "5. Decision Layer":
+            "Probability-to-action mapping (Hard Block / OTP / Review / Allow).",
+        "6. Monitoring & CI":
+            "Versioned artifacts, pytest validation, reproducible deployments."
+    }
+
+    for title, desc in stages.items():
+        st.markdown(f"### {title}")
+        st.write(desc)
+        st.markdown("---")
