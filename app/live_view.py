@@ -1,53 +1,43 @@
-# app/live_view.py
 from datetime import datetime
 import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 
+
 def render_live_scoring(scorer, threshold: float):
 
-    st.markdown("### 🔍 Live Transaction Scoring")
+    st.markdown("### Live Transaction Risk Console")
 
-    st.markdown(
-        "Use this panel to simulate an incoming payment and see the fraud probability, label, "
-        "and the operational action the risk engine would take."
-    )
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
 
-    col_form, col_explain = st.columns([2, 1])
+    with st.form("txn_form"):
 
-    with col_form:
-        with st.form("txn_form"):
+        c1, c2, c3 = st.columns(3)
 
-            c1, c2, c3 = st.columns(3)
+        with c1:
+            amount = st.number_input("Amount (₹)", 1.0, value=1200.0)
+            payment_method = st.selectbox("Payment Method", ["UPI", "CARD", "NETBANKING", "WALLET"])
+            merchant_category = st.selectbox("Merchant Category",
+                                             ["Electronics", "Travel", "Fashion", "Gaming", "Grocery", "Utilities"])
+            is_international = st.selectbox("Is International?", [0, 1])
 
-            with c1:
-                amount = st.number_input("Amount (₹)", 1.0, value=1200.0)
-                payment_method = st.selectbox("Payment Method", ["UPI", "CARD", "NETBANKING", "WALLET"])
-                merchant_category = st.selectbox("Merchant Category",
-                                                 ["Electronics", "Travel", "Fashion", "Gaming", "Grocery", "Utilities"])
-                is_international = st.selectbox("Is International?", [0, 1])
+        with c2:
+            ip_risk = st.slider("IP Risk Score", 0.0, 1.0, 0.25)
+            device_trust = st.slider("Device Trust Score", 0.0, 1.0, 0.8)
+            device_change_flag = st.selectbox("Device Change", [0, 1])
+            location_change_flag = st.selectbox("Location Change", [0, 1])
 
-            with c2:
-                ip_risk = st.slider("IP Risk Score", 0.0, 1.0, 0.25)
-                device_trust = st.slider("Device Trust Score", 0.0, 1.0, 0.8)
-                device_change_flag = st.selectbox("Device Change", [0, 1])
-                location_change_flag = st.selectbox("Location Change", [0, 1])
+        with c3:
+            txn_count_24h = st.number_input("Txn Count (24h)", 0, value=2)
+            avg_amount_24h = st.number_input("Avg Amount (24h)", 0.0, value=900.0)
+            otp_success_rate = st.slider("OTP Success Rate", 0.0, 1.0, 0.95)
+            past_fraud_count = st.number_input("Past Fraud Count", 0, value=0)
+            past_disputes = st.number_input("Past Disputes", 0, value=0)
+            merchant_hist_fraud = st.slider("Merchant Fraud Rate", 0.0, 1.0, 0.05)
 
-            with c3:
-                txn_count_24h = st.number_input("Txn Count (24h)", 0, value=2)
-                avg_amount_24h = st.number_input("Avg Amount (24h)", 0.0, value=900.0)
-                otp_success_rate = st.slider("OTP Success Rate", 0.0, 1.0, 0.95)
-                past_fraud_count = st.number_input("Past Fraud Count", 0, value=0)
-                past_disputes = st.number_input("Past Disputes", 0, value=0)
-                merchant_hist_fraud = st.slider("Merchant Fraud Rate", 0.0, 1.0, 0.05)
+        submitted = st.form_submit_button("Score Transaction")
 
-            submitted = st.form_submit_button("Score Transaction")
-
-    with col_explain:
-        st.info(
-            "Try increasing IP risk and merchant fraud rate while decreasing device trust "
-            "to see escalation."
-        )
+    st.markdown('</div>', unsafe_allow_html=True)
 
     if submitted:
         now = datetime.now()
@@ -83,21 +73,32 @@ def render_live_scoring(scorer, threshold: float):
         prob = scorer.predict_proba(df_input)
         label, action = scorer.predict_label_and_action(df_input)
 
-        risk_color = "#ef4444" if label == 1 else "#22c55e"
+        risk_band = (
+            "LOW RISK" if prob < 0.03 else
+            "MEDIUM RISK" if prob < threshold else
+            "HIGH RISK"
+        )
+
+        band_color = "#22c55e" if risk_band == "LOW RISK" else \
+                     "#f59e0b" if risk_band == "MEDIUM RISK" else "#ef4444"
 
         st.markdown(f"""
         <div class="glass-card">
-            <h2>Fraud Probability: <span style="color:#facc15;">{prob:.1%}</span></h2>
-            <h2>Label: <span style="color:{risk_color};">
-                {"FRAUD" if label==1 else "GENUINE"}
-            </span></h2>
-            <h3 style="color:#38bdf8;">Recommended Action: {action}</h3>
+            <h2>Risk Assessment</h2>
+            <h1 style="color:{band_color};">{risk_band}</h1>
+            <p>Fraud Probability: <b>{prob:.2%}</b></p>
+            <p>Decision Threshold: <b>{threshold:.3f}</b></p>
+            <p>Recommended Action: <b>{action}</b></p>
         </div>
         """, unsafe_allow_html=True)
 
         fig = go.Figure(go.Indicator(
             mode="gauge+number",
             value=prob * 100,
-            gauge={"axis": {"range": [0, 100]}, "bar": {"color": risk_color}},
+            gauge={
+                "axis": {"range": [0, 100]},
+                "bar": {"color": band_color},
+            },
         ))
+
         st.plotly_chart(fig, use_container_width=True)

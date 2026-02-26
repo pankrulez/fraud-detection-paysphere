@@ -1,4 +1,3 @@
-# app/app.py
 import os
 import sys
 import pandas as pd
@@ -24,43 +23,40 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ---------- GLOBAL UI ----------
+# ---------- ENTERPRISE THEME ----------
 st.markdown("""
 <style>
 .stApp {
-    background: linear-gradient(-45deg, #0f172a, #111827, #1e293b, #0f172a);
-    background-size: 400% 400%;
-    animation: gradientBG 18s ease infinite;
-    color: #e5e7eb;
+    background: #0f172a;
+    color: #e2e8f0;
 }
-@keyframes gradientBG {
-    0% {background-position:0% 50%;}
-    50% {background-position:100% 50%;}
-    100% {background-position:0% 50%;}
-}
-.glass-card {
-    background: rgba(17,24,39,0.75);
-    backdrop-filter: blur(14px);
-    border-radius: 16px;
-    padding: 1.5rem;
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-    animation: fadeIn 0.6s ease-in-out;
-}
-@keyframes fadeIn {
-    from {opacity:0; transform: translateY(8px);}
-    to {opacity:1; transform: translateY(0);}
-}
+
 section[data-testid="stSidebar"] {
     background: #0b1220;
+    border-right: 1px solid rgba(255,255,255,0.06);
 }
+
+.glass-card {
+    background: #111827;
+    border-radius: 14px;
+    padding: 1.4rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 4px 18px rgba(0,0,0,0.25);
+}
+
 [data-testid="stMetric"] {
-    background: rgba(30,41,59,0.6);
-    padding: 14px;
+    background: #111827;
+    padding: 18px;
     border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+h1, h2, h3 {
+    font-weight: 600;
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 @st.cache_resource
 def load_scorer(threshold: float = 0.5):
@@ -69,6 +65,7 @@ def load_scorer(threshold: float = 0.5):
         encoders_path="models/encoders/preprocessing.joblib",
         threshold=threshold,
     )
+
 
 @st.cache_data
 def load_sample_data(n: int = 50000):
@@ -80,45 +77,46 @@ def load_sample_data(n: int = 50000):
         df = df.sample(n, random_state=42)
     return df
 
+
 # Sidebar
 with st.sidebar:
     st.title("PaySphere Risk Engine")
 
     section = st.radio(
         "Navigation",
-        ["🏠 Overview", "🔍 Live Scoring", "📊 Analytics & Plots", "🧬 Project Pipeline"],
+        ["Overview", "Live Scoring", "Analytics", "Pipeline"],
     )
 
     st.markdown("---")
-    threshold = st.slider(
-    "Fraud cutoff (decision threshold)",
-    min_value=0.001,
-    max_value=0.5,
-    value=0.08333,
-    step=0.001,
-    format="%.5f",
-)
 
-    show_raw = st.checkbox("Show raw data sample in Analytics", False)
+    threshold = st.slider(
+        "Fraud Decision Threshold",
+        min_value=0.001,
+        max_value=0.5,
+        value=0.08333,
+        step=0.001,
+        format="%.5f",
+    )
+
+    show_raw = st.checkbox("Show raw data sample", False)
 
 scorer = load_scorer(threshold)
 
-
-# Header
 st.markdown("# PaySphere Fraud Detection System")
-st.markdown("End-to-end ML-powered risk engine for UPI, cards, net banking, and wallets.")
-
+st.markdown(
+    "Production-grade ML risk engine for digital payment fraud prevention."
+)
 
 st.write("")
 
-if section == "🏠 Overview":
+if section == "Overview":
     render_overview(load_sample_data)
 
-elif section == "🔍 Live Scoring":
+elif section == "Live Scoring":
     render_live_scoring(scorer, threshold)
 
-elif section == "📊 Analytics & Plots":
+elif section == "Analytics":
     render_analytics(load_sample_data, show_raw, threshold, scorer)
 
-elif section == "🧬 Project Pipeline":
+elif section == "Pipeline":
     render_pipeline()
