@@ -63,7 +63,7 @@ def render_overview(load_sample_data_fn):
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        animated_counter("Transactions (sample)", total_txn, "#3b82f6")
+        animated_counter("Transactions", total_txn, "#3b82f6")
 
     with col2:
         animated_counter("Fraud Cases", fraud_count, "#ef4444")

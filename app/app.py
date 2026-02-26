@@ -71,7 +71,7 @@ def load_scorer(threshold: float = 0.5):
     )
 
 @st.cache_data
-def load_sample_data(n: int = 5000):
+def load_sample_data(n: int = 50000):
     path = "data/interim/transactions_clean.csv"
     if not os.path.exists(path):
         path = "data/raw/transactions_fraud.csv"
