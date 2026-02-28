@@ -12,8 +12,8 @@ CHART_HEIGHT = 420
 
 
 def section_title(title):
-    st.markdown(f"## {title}")
-    st.markdown("---")
+    st.markdown(f"### {title}")
+    # st.markdown("---")
 
 
 def render_analytics(load_sample_data_fn, show_raw: bool, threshold: float, scorer):
@@ -47,7 +47,6 @@ def render_analytics(load_sample_data_fn, show_raw: bool, threshold: float, scor
     # =============================
     # PERFORMANCE SUMMARY
     # =============================
-    section_title("Performance Summary")
 
     k1, k2, k3, k4 = st.columns(4)
     k1.metric("Precision", f"{precision:.2%}")
@@ -58,8 +57,8 @@ def render_analytics(load_sample_data_fn, show_raw: bool, threshold: float, scor
     # =============================
     # CONFUSION MATRIX
     # =============================
+   
     section_title("Confusion Matrix")
-
     matrix = np.array([[tn, fp],
                        [fn, tp]])
 
