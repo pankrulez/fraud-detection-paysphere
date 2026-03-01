@@ -1,0 +1,84 @@
+/* Base background */
+body {
+    background-color: #0b0f17;
+}
+
+.container-fluid {
+    padding-left: 32px;
+    padding-right: 32px;
+}
+
+/* Sidebar */
+.nav-link {
+    color: #9ca3af !important;
+    font-weight: 500;
+}
+
+.nav-link.active {
+    background-color: #111827 !important;
+    border-left: 3px solid #22d3ee !important;
+    color: #ffffff !important;
+}
+
+/* KPI Cards */
+.card {
+    background: linear-gradient(
+        145deg,
+        #0f1a2d,
+        #0b1323
+    ) !important;
+
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 14px;
+
+    box-shadow:
+        0 0 0 1px rgba(255,255,255,0.02),
+        0 10px 25px rgba(0,0,0,0.25);
+}
+
+/* Titles */
+h2 {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* Graph container spacing */
+.dash-graph {
+    margin-top: 20px;
+}
+
+.kpi-glow {
+    animation: kpiPulse 0.8s ease-out;
+}
+
+.kpi-glow-green {
+    animation: glowGreen 0.8s ease-out;
+}
+
+.kpi-glow-red {
+    animation: glowRed 0.8s ease-out;
+}
+
+@keyframes kpiPulse {
+    0% {
+        text-shadow: 0 0 0px rgba(34, 211, 238, 0);
+    }
+    50% {
+        text-shadow: 0 0 12px rgba(34, 211, 238, 0.6);
+    }
+    100% {
+        text-shadow: 0 0 0px rgba(34, 211, 238, 0);
+    }
+}
+
+@keyframes glowGreen {
+    0% { text-shadow: 0 0 0px rgba(0,255,150,0); }
+    50% { text-shadow: 0 0 14px rgba(0,255,150,0.8); }
+    100% { text-shadow: 0 0 0px rgba(0,255,150,0); }
+}
+
+@keyframes glowRed {
+    0% { text-shadow: 0 0 0px rgba(255,60,60,0); }
+    50% { text-shadow: 0 0 14px rgba(255,60,60,0.8); }
+    100% { text-shadow: 0 0 0px rgba(255,60,60,0); }
+}
