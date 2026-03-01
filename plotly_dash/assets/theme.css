@@ -1,0 +1,48 @@
+/* Base background */
+body {
+    background-color: #0b0f17;
+}
+
+.container-fluid {
+    padding-left: 32px;
+    padding-right: 32px;
+}
+
+/* Sidebar */
+.nav-link {
+    color: #9ca3af !important;
+    font-weight: 500;
+}
+
+.nav-link.active {
+    background-color: #111827 !important;
+    border-left: 3px solid #22d3ee !important;
+    color: #ffffff !important;
+}
+
+/* KPI Cards */
+.card {
+    background: linear-gradient(
+        145deg,
+        #0f1a2d,
+        #0b1323
+    ) !important;
+
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 14px;
+
+    box-shadow:
+        0 0 0 1px rgba(255,255,255,0.02),
+        0 10px 25px rgba(0,0,0,0.25);
+}
+
+/* Titles */
+h2 {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* Graph container spacing */
+.dash-graph {
+    margin-top: 20px;
+}
