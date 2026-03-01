@@ -1,9 +1,10 @@
-from functools import lru_cache
 import numpy as np
+from functools import lru_cache
 from .data_loader import load_sample_data
 from .model_loader import load_default_model
 
-@lru_cache()
+
+@lru_cache(maxsize=1)
 def get_cached_probabilities():
 
     df = load_sample_data()
@@ -12,7 +13,10 @@ def get_cached_probabilities():
     raw_probs = scorer.predict_proba(df)
     probs = np.asarray(raw_probs)
 
-    if probs.ndim == 2:
+    # Guarantee vector shape
+    if probs.ndim == 0:
+        probs = np.full(len(df), float(probs))
+    elif probs.ndim == 2:
         probs = probs[:, 1]
 
     return df, probs

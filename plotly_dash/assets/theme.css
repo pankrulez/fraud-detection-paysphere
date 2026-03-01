@@ -46,3 +46,39 @@ h2 {
 .dash-graph {
     margin-top: 20px;
 }
+
+.kpi-glow {
+    animation: kpiPulse 0.8s ease-out;
+}
+
+.kpi-glow-green {
+    animation: glowGreen 0.8s ease-out;
+}
+
+.kpi-glow-red {
+    animation: glowRed 0.8s ease-out;
+}
+
+@keyframes kpiPulse {
+    0% {
+        text-shadow: 0 0 0px rgba(34, 211, 238, 0);
+    }
+    50% {
+        text-shadow: 0 0 12px rgba(34, 211, 238, 0.6);
+    }
+    100% {
+        text-shadow: 0 0 0px rgba(34, 211, 238, 0);
+    }
+}
+
+@keyframes glowGreen {
+    0% { text-shadow: 0 0 0px rgba(0,255,150,0); }
+    50% { text-shadow: 0 0 14px rgba(0,255,150,0.8); }
+    100% { text-shadow: 0 0 0px rgba(0,255,150,0); }
+}
+
+@keyframes glowRed {
+    0% { text-shadow: 0 0 0px rgba(255,60,60,0); }
+    50% { text-shadow: 0 0 14px rgba(255,60,60,0.8); }
+    100% { text-shadow: 0 0 0px rgba(255,60,60,0); }
+}

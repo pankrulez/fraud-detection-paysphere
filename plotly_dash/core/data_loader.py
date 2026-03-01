@@ -1,9 +1,9 @@
 import pandas as pd
 import os
-from functools import lru_cache
 
-@lru_cache()
+
 def load_sample_data(n=50000):
+
     path = "data/interim/transactions_clean.csv"
     if not os.path.exists(path):
         path = "data/raw/transactions_fraud.csv"

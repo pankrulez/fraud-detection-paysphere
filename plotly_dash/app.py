@@ -1,4 +1,4 @@
-from dash import Dash, Input, Output, State, dcc
+from dash import Dash, Input, Output, State
 import dash_bootstrap_components as dbc
 import plotly.io as pio
 import plotly.graph_objects as go
@@ -6,8 +6,15 @@ import plotly.graph_objects as go
 from .state import initial_state
 from .components.layout import base_layout
 from .components.sidebar import build_sidebar
+
 from .pages.executive import layout as executive_layout
 from .pages.model_lab import layout as model_lab_layout
+from .pages.risk_console import layout as console_layout
+from .pages.segment_explorer import layout as segment_layout
+from .pages.governance import layout as governance_layout
+
+from .core.model_loader import load_default_model
+
 
 app = Dash(
     __name__,
@@ -15,27 +22,26 @@ app = Dash(
     suppress_callback_exceptions=True,
 )
 
+server = app.server
+
+
+# -------- Fintech Theme --------
 pio.templates["fintech_dark"] = go.layout.Template(
     layout=dict(
         paper_bgcolor="#0b0f17",
         plot_bgcolor="#0b0f17",
         font=dict(color="#e5e7eb"),
-        margin=dict(l=20, r=20, t=40, b=20)
     )
 )
-
 pio.templates.default = "fintech_dark"
 
-server = app.server
 
+# -------- Layout --------
 init = initial_state()
-
 app.layout = base_layout(build_sidebar(init))
 
 
-# ---------------------------------
-# Update Global State From Sidebar
-# ---------------------------------
+# -------- Global State --------
 @app.callback(
     Output("global-state", "data"),
     Input("threshold-allow", "value"),
@@ -46,29 +52,19 @@ app.layout = base_layout(build_sidebar(init))
     Input("recovery-rate", "value"),
     Input("revenue-per-txn", "value"),
 )
-def update_global_state(
-    t_allow,
-    t_block,
-    cost_fp,
-    cost_fn,
-    review_cost,
-    recovery_rate,
-    revenue,
-):
+def update_state(a, b, cfp, cfn, rc, rr, rev):
     return {
-        "threshold_allow": t_allow,
-        "threshold_block": t_block,
-        "cost_fp": cost_fp,
-        "cost_fn": cost_fn,
-        "review_cost": review_cost,
-        "recovery_rate": recovery_rate,
-        "revenue_per_txn": revenue,
+        "threshold_allow": a,
+        "threshold_block": b,
+        "cost_fp": cfp,
+        "cost_fn": cfn,
+        "review_cost": rc,
+        "recovery_rate": rr,
+        "revenue_per_txn": rev,
     }
 
 
-# ---------------------------------
-# Routing
-# ---------------------------------
+# -------- Routing --------
 @app.callback(
     Output("page-content", "children"),
     Input("url", "pathname"),
@@ -81,6 +77,15 @@ def route(pathname, state):
 
     if pathname == "/model":
         return model_lab_layout(state)
+
+    if pathname == "/console":
+        return console_layout(state)
+
+    if pathname == "/segments":
+        return segment_layout(state)
+
+    if pathname == "/governance":
+        return governance_layout(state)
 
     return executive_layout(state)
 
