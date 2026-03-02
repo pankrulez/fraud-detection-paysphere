@@ -1,76 +1,66 @@
 import streamlit as st
 
-def section_card(title, content_html, accent="#4C8BF5"):
-    html = f"""
-<div style="
-    background-color:#151b26;
-    padding:24px;
-    border-radius:12px;
-    border-left:4px solid {accent};
-    border-top:1px solid rgba(255,255,255,0.06);
-    border-right:1px solid rgba(255,255,255,0.06);
-    border-bottom:1px solid rgba(255,255,255,0.06);
-    margin-bottom:28px;
-">
-    <h2 style="color:{accent}; margin-bottom:14px; font-weight:600;">
-        {title}
-    </h2>
+# ==============================
+# DESIGN SYSTEM
+# ==============================
+ACCENT_COLORS = {
+    "primary": "#4C8BF5",      # Blue
+    "success": "#5CA27F",      # Muted green
+    "warning": "#B08968",      # Bronze
+    "info": "#7E8CE0",         # Indigo
+    "neutral": "#5DA9A6",      # Teal-grey
+    "governance": "#9A7AA0",   # Muted violet
+}
 
-    {content_html}
+DEFAULT_CHART_HEIGHT = 420
 
-</div>
-"""
-    st.html(html)
+# ==============================
+# NATIVE STREAMLIT CARDS
+# ==============================
+
+def chart_card(title, description, fig, accent="primary", height=DEFAULT_CHART_HEIGHT):
+    """
+    Renders a native Streamlit container with a custom styled title, 
+    description, and a fully interactive Plotly chart.
+    """
+    color = ACCENT_COLORS.get(accent, accent)
     
-# chart card    
-def chart_card(title, description, fig, accent="#4C8BF5", height=400):
-    plot_html = fig.to_html(
-        full_html=False,
-        include_plotlyjs=True,  # Bundle Plotly.js inside (fixes CDN issues)
-        config={"displayModeBar": False, "responsive": True},
-    )
-
-    html = f"""
-<div style="
-    background-color:#151b26;
-    padding:24px;
-    border-radius:12px;
-    border-left:4px solid {accent};
-    border-top:1px solid rgba(255,255,255,0.06);
-    border-right:1px solid rgba(255,255,255,0.06);
-    border-bottom:1px solid rgba(255,255,255,0.06);
-    margin-bottom:28px;
-">
-    <h3 style="color:{accent}; margin-bottom:8px; font-weight:600;">
-        {title}
-    </h3>
-    <p style="margin-bottom:16px; color:#ccc;">
-        {description}
-    </p>
-    <div style="height:{height}px; width:100%;">
-        {plot_html}
-    </div>
-</div>
-"""
-    st.html(html)
+    # Use native Streamlit container for the card background and border
+    with st.container(border=True):
+        
+        # Inject custom HTML *only* for the text/headers to keep your beautiful left-border accent
+        st.markdown(f"""
+            <div style="border-left: 4px solid {color}; padding-left: 12px; margin-bottom: 16px;">
+                <h3 style="color: {color}; margin: 0; font-weight: 600;">{title}</h3>
+                <p style="margin: 4px 0 0 0; color: #a1a1aa; font-size: 0.95rem;">{description}</p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Update figure margins so it fits snugly in the card
+        fig.update_layout(
+            height=height, 
+            margin=dict(l=10, r=10, t=10, b=10),
+            paper_bgcolor="rgba(0,0,0,0)", # Transparent background to inherit the container's dark mode
+            plot_bgcolor="rgba(0,0,0,0)"
+        )
+        
+        # NATIVE PLOTLY RENDER: This guarantees full interactivity, hover templates, and responsiveness
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
-def heading_card(heading, accent="#4C8BF5"):
-    html = f"""
-<div style="
-    background-color:#151b26;
-    padding:5px;
-    border-radius:12px;
-    border-left:4px solid {accent};
-    border-top:1px solid rgba(255,255,255,0.06);
-    border-right:1px solid rgba(255,255,255,0.06);
-    border-bottom:1px solid rgba(255,255,255,0.06);
-    margin-bottom:10px;
-">
-    <h2 style="color:{accent}; margin-bottom:14px; font-weight:600;">
-        {heading}
-    </h2>
-
-</div>
-"""
-    st.html(html)
+def info_card(title, content_html, accent="primary"):
+    """
+    A text-based card for metrics, pipeline steps, or general information.
+    Replaces your previous section_card and heading_card.
+    """
+    color = ACCENT_COLORS.get(accent, accent)
+    
+    with st.container(border=True):
+        st.markdown(f"""
+            <div style="border-left: 4px solid {color}; padding-left: 12px; margin-bottom: 12px;">
+                <h3 style="color: {color}; margin: 0; font-weight: 600;">{title}</h3>
+            </div>
+            <div style="padding-left: 8px; color: #e5e7eb;">
+                {content_html}
+            </div>
+        """, unsafe_allow_html=True)

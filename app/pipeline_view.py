@@ -1,105 +1,12 @@
+import os
+import joblib
 import streamlit as st
+from app.ui_components import info_card
 
-
-# =====================================================
-# GLOBAL CARD STYLING (REAL TARGET)
-# =====================================================
-st.markdown("""
-<style>
-
-/* Reduce overall page vertical padding */
-.block-container {
-    padding-top: 2rem;
-    padding-bottom: 2rem;
-}
-
-/* Compact card styling */
-div[data-testid="stVerticalBlock"] > div {
-    background-color: #151b26;
-    border-radius: 12px;
-    padding: 20px !important;
-    margin-bottom: 24px !important;
-}
-
-/* Compact headings */
-h2 {
-    margin-top: 0.2rem !important;
-    margin-bottom: 0.6rem !important;
-}
-
-h3 {
-    margin-top: 0.8rem !important;
-    margin-bottom: 0.3rem !important;
-}
-
-/* Reduce paragraph spacing */
-p {
-    margin-bottom: 0.5rem !important;
-}
-
-/* Reduce bullet spacing */
-ul {
-    margin-top: 0.2rem !important;
-    margin-bottom: 0.6rem !important;
-}
-
-li {
-    margin-bottom: 0.2rem !important;
-}
-
-</style>
-""", unsafe_allow_html=True)
-
-
-# =====================================================
-# STAGE SECTION
-# =====================================================
-def stage_section(step, title, objective, methodology, output):
-    step_colors = {
-        1: "#4C8BF5", 2: "#5CA27F", 3: "#B08968",
-        4: "#7E8CE0", 5: "#5DA9A6", 6: "#9A7AA0",
-    }
-    accent = step_colors.get(step, "#4C8BF5")
-    methodology_html = "".join([f"<li>{m}</li>" for m in methodology])
-
-    html = f"""
-<div style="
-    background-color:#151b26;
-    padding:24px;
-    border-radius:12px;
-    border-left:4px solid {accent};
-    border-top:1px solid rgba(255,255,255,0.06);
-    border-right:1px solid rgba(255,255,255,0.06);
-    border-bottom:1px solid rgba(255,255,255,0.06);
-    margin-bottom:28px;
-">
-    <h2 style="color:{accent}; margin-bottom:14px; font-weight:600;">
-        Step {step}: {title}
-    </h2>
-
-    <p><strong>Objective:</strong> {objective}</p>
-
-    <h3 style="margin-top:18px;">Methodology</h3>
-    <ul>{methodology_html}</ul>
-
-    <p style="margin-top:18px;"><strong>Output:</strong> {output}</p>
-
-</div>
-"""
-    st.html(html)
-
-
-# =====================================================
-# MAIN RENDER
-# =====================================================
 def render_pipeline():
-
     st.title("Fraud Detection Pipeline Architecture")
     st.caption("Technical specification of the end-to-end fraud detection system.")
 
-    # st.divider()
-
-    # st.markdown("## System Overview")
     st.write(
         """
         The fraud detection pipeline transforms raw digital payment transactions into 
@@ -108,83 +15,110 @@ def render_pipeline():
         with customer experience and operational constraints.
         """
     )
-
     st.markdown("<br>", unsafe_allow_html=True)
 
-    stage_section(
-        1,
-        "Data Ingestion & Validation",
-        "Ensure structured, consistent, and analysis-ready transaction data before modeling.",
-        [
-            "Loaded structured transaction datasets",
-            "Validated schema consistency across fields",
-            "Handled missing values",
-            "Parsed timestamp features for time-based analysis",
-        ],
-        "Clean, validated dataset ready for feature engineering.",
-    )
+    # Define the pipeline steps cleanly
+    steps = [
+        {
+            "step": 1, "title": "Data Ingestion & Validation", "accent": "primary",
+            "obj": "Ensure structured, consistent, and analysis-ready transaction data before modeling.",
+            "meth": ["Loaded structured transaction datasets", "Validated schema consistency across fields", "Handled missing values", "Parsed timestamp features for time-based analysis"],
+            "out": "Clean, validated dataset ready for feature engineering."
+        },
+        {
+            "step": 2, "title": "Behavioral Feature Engineering", "accent": "success",
+            "obj": "Extract high-signal fraud indicators using behavioral and contextual signals.",
+            "meth": ["Engineered transaction velocity features (24-hour window)", "Computed customer spending behavior metrics", "Calculated merchant diversity measures", "Extracted temporal indicators"],
+            "out": "Feature matrix capturing transaction-level and behavioral risk signals."
+        },
+        {
+            "step": 3, "title": "Class Imbalance Strategy", "accent": "warning",
+            "obj": "Address extreme fraud rarity to prevent majority-class bias in modeling.",
+            "meth": ["Analyzed fraud distribution and skewness", "Applied resampling techniques where required", "Optimized evaluation metrics toward precision-recall trade-off"],
+            "out": "Balanced training setup reducing bias toward non-fraud predictions."
+        },
+        {
+            "step": 4, "title": "Model Training & Optimization", "accent": "info",
+            "obj": "Train a classification model capable of discriminating fraudulent activity.",
+            "meth": ["Implemented tree-based ensemble classifier", "Validated using confusion matrix metrics", "Evaluated precision-recall trade-offs", "Calibrated probabilities"],
+            "out": "Calibrated fraud probability model suitable for threshold-based decisioning."
+        },
+        {
+            "step": 5, "title": "Real-Time Risk Scoring", "accent": "neutral",
+            "obj": "Convert model probability outputs into operational fraud decisions.",
+            "meth": ["Generated transaction-level fraud probabilities", "Mapped probabilities to decision thresholds", "Defined Allow / Review / Block logic", "Integrated scoring into live UI"],
+            "out": "Operational fraud scoring engine enabling business-aligned decision control."
+        },
+        {
+            "step": 6, "title": "Monitoring & Governance", "accent": "governance",
+            "obj": "Ensure system reliability, maintainability, and reproducibility.",
+            "meth": ["Versioned model artifacts", "Maintained modular project architecture", "Integrated automated testing", "Prepared deployment-ready structure"],
+            "out": "Governance-ready fraud detection system with reproducible model lifecycle."
+        }
+    ]
 
-    stage_section(
-        2,
-        "Behavioral Feature Engineering",
-        "Extract high-signal fraud indicators using behavioral and contextual signals.",
-        [
-            "Engineered transaction velocity features (24-hour window)",
-            "Computed customer spending behavior metrics",
-            "Calculated merchant diversity measures",
-            "Extracted temporal indicators (hour, weekend flags)",
-        ],
-        "Feature matrix capturing transaction-level and behavioral risk signals.",
-    )
-
-    stage_section(
-        3,
-        "Class Imbalance Strategy",
-        "Address extreme fraud rarity to prevent majority-class bias in modeling.",
-        [
-            "Analyzed fraud distribution and skewness",
-            "Applied resampling techniques where required",
-            "Optimized evaluation metrics toward precision-recall trade-off",
-            "Conducted threshold sensitivity analysis",
-        ],
-        "Balanced training setup reducing bias toward non-fraud predictions.",
-    )
-
-    stage_section(
-        4,
-        "Model Training & Optimization",
-        "Train a classification model capable of discriminating fraudulent activity.",
-        [
-            "Implemented tree-based ensemble classifier",
-            "Validated using confusion matrix metrics",
-            "Evaluated precision-recall trade-offs",
-            "Calibrated fraud probability outputs",
-        ],
-        "Calibrated fraud probability model suitable for threshold-based decisioning.",
-    )
-
-    stage_section(
-        5,
-        "Real-Time Risk Scoring",
-        "Convert model probability outputs into operational fraud decisions.",
-        [
-            "Generated transaction-level fraud probabilities",
-            "Mapped probabilities to decision thresholds",
-            "Defined Allow / Review / Block logic",
-            "Integrated scoring into live interface",
-        ],
-        "Operational fraud scoring engine enabling business-aligned decision control.",
-    )
-
-    stage_section(
-        6,
-        "Monitoring & Governance",
-        "Ensure system reliability, maintainability, and reproducibility.",
-        [
-            "Versioned model artifacts",
-            "Maintained modular project architecture",
-            "Integrated automated testing (pytest)",
-            "Prepared deployment-ready structure",
-        ],
-        "Governance-ready fraud detection system with reproducible model lifecycle.",
-    )
+    # Dynamically render using the unified UI component
+    # Dynamically render using the unified UI component
+    for s in steps:
+        meth_html = "".join([f"<li style='margin-bottom: 4px;'>{m}</li>" for m in s['meth']])
+        
+        # Formatted as a single continuous string (no explicit line breaks) 
+        # to prevent Streamlit's Markdown parser from breaking the div tags
+        content_html = (
+            f"<p style='margin-bottom: 8px;'><b>Objective:</b> {s['obj']}</p>"
+            f"<p style='margin-bottom: 4px;'><b>Methodology:</b></p>"
+            f"<ul style='margin-top: 0; padding-left: 20px;'>{meth_html}</ul>"
+            f"<p style='margin-top: 8px;'><b>Output:</b> <span style='color: #10b981; font-weight: 500;'>{s['out']}</span></p>"
+        )
+        
+        info_card(f"Step {s['step']}: {s['title']}", content_html, accent=s['accent'])
+    
+    st.markdown("---")
+    st.subheader("📦 Production Model Registry")
+    
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(current_dir, ".."))
+    model_path = os.path.join(project_root, "models", "artifacts", "fraud_model.joblib")
+    
+    if os.path.exists(model_path):
+        # Dynamically inspect the real model artifact
+        file_size_kb = os.path.getsize(model_path) / 1024
+        
+        try:
+            model = joblib.load(model_path)
+            model_type = type(model).__name__
+            
+            # Try to get feature count (works for most sklearn/xgboost models)
+            if hasattr(model, "n_features_in_"):
+                n_features = model.n_features_in_
+            elif hasattr(model, "feature_names_in_"):
+                n_features = len(model.feature_names_in_)
+            else:
+                n_features = "Dynamic"
+                
+            registry_html = f"""
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px;">
+                <div>
+                    <p style="margin:0; color:#a1a1aa; font-size:0.9rem;">Artifact File</p>
+                    <p style="margin:0; font-weight:600; color:#e5e7eb;">fraud_model.joblib</p>
+                </div>
+                <div>
+                    <p style="margin:0; color:#a1a1aa; font-size:0.9rem;">Algorithm Family</p>
+                    <p style="margin:0; font-weight:600; color:#4C8BF5;">{model_type}</p>
+                </div>
+                <div>
+                    <p style="margin:0; color:#a1a1aa; font-size:0.9rem;">Input Features</p>
+                    <p style="margin:0; font-weight:600; color:#10b981;">{n_features}</p>
+                </div>
+                <div>
+                    <p style="margin:0; color:#a1a1aa; font-size:0.9rem;">File Size</p>
+                    <p style="margin:0; font-weight:600; color:#B08968;">{file_size_kb:.1f} KB</p>
+                </div>
+            </div>
+            """
+            info_card("Current Active Model Artifact", registry_html, accent="neutral")
+            
+        except Exception as e:
+            st.warning(f"Model file exists but couldn't be loaded for inspection: {e}")
+    else:
+        st.error(f"Model artifact not found at {model_path}")

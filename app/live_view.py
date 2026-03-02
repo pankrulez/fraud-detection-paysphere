@@ -1,50 +1,61 @@
+import time
 from datetime import datetime
 import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
-
+from app.ui_components import chart_card, info_card
 
 def render_live_scoring(scorer, threshold: float):
 
     st.title("Real-Time Risk Scoring Console")
-
     st.markdown(
-        "Simulate incoming transactions and observe model probability, "
-        "risk classification, and operational decision."
+        "Simulate incoming transactions and observe the model's probability score, "
+        "risk classification, and operational decision in real-time."
     )
-
     st.markdown("---")
 
-    with st.form("txn_form"):
-
+    # ==========================================
+    # TRANSACTION INPUT FORM
+    # ==========================================
+    with st.form("txn_form", border=True):
+        st.subheader("Transaction Intercept Parameters")
+        
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            amount = st.number_input("Amount (₹)", 1.0, value=1200.0)
+            amount = st.number_input("Amount (₹)", 1.0, value=12500.0, step=500.0)
             payment_method = st.selectbox("Payment Method", ["UPI", "CARD", "NETBANKING", "WALLET"])
-            merchant_category = st.selectbox("Merchant Category",
-                                             ["Electronics", "Travel", "Fashion", "Gaming", "Grocery", "Utilities"])
+            merchant_category = st.selectbox("Merchant Category", ["Electronics", "Travel", "Fashion", "Gaming", "Grocery", "Utilities"])
 
         with col2:
-            ip_risk = st.slider("IP Risk Score", 0.0, 1.0, 0.25)
-            device_trust = st.slider("Device Trust Score", 0.0, 1.0, 0.8)
-            txn_count_24h = st.number_input("Txn Count (24h)", 0, value=2)
+            ip_risk = st.slider("IP Reputation Risk", 0.0, 1.0, 0.85, help="1.0 means known proxy/botnet IP")
+            device_trust = st.slider("Device Trust Score", 0.0, 1.0, 0.20, help="Low score implies new/emulated device")
+            txn_count_24h = st.number_input("Txn Count (24h)", 0, value=5)
 
         with col3:
-            merchant_hist_fraud = st.slider("Merchant Fraud Rate", 0.0, 1.0, 0.05)
-            is_international = st.selectbox("International?", [0, 1])
+            merchant_hist_fraud = st.slider("Merchant Fraud Rate", 0.0, 1.0, 0.15)
+            is_international = st.selectbox("Cross-Border (International)?", [0, 1])
 
-        submitted = st.form_submit_button("Score Transaction")
+        st.markdown("<br>", unsafe_allow_html=True)
+        submitted = st.form_submit_button("⚡ Execute Real-Time Risk Analysis", type="primary", use_container_width=True)
 
+    # ==========================================
+    # SCORING & OUTPUT
+    # ==========================================
     if submitted:
+        
+        # 1. The "Wow" Factor: Simulate heavy processing
+        with st.spinner("Intercepting transaction... Analyzing 20+ behavioral signals..."):
+            time.sleep(1.2) # Adds dramatic effect for the presentation
 
         now = datetime.now()
 
+        # Build Dataframe
         df_input = pd.DataFrame([{
-            "transaction_id": 0,
-            "customer_id": 0,
-            "device_id": 0,
-            "merchant_id": 0,
+            "transaction_id": 999999,
+            "customer_id": 10234,
+            "device_id": 5555,
+            "merchant_id": 111,
             "timestamp": now.isoformat(),
             "amount": amount,
             "payment_method": payment_method,
@@ -53,12 +64,12 @@ def render_live_scoring(scorer, threshold: float):
             "ip_address_risk_score": ip_risk,
             "device_trust_score": device_trust,
             "txn_count_last_24h": txn_count_24h,
-            "avg_amount_last_24h": 0,
-            "merchant_diversity_last_7d": 0,
-            "device_change_flag": 0,
-            "location_change_flag": 0,
+            "avg_amount_last_24h": 500,
+            "merchant_diversity_last_7d": 3,
+            "device_change_flag": 1 if device_trust < 0.5 else 0,
+            "location_change_flag": 1 if ip_risk > 0.7 else 0,
             "authentication_method": "OTP",
-            "otp_success_rate_customer": 1,
+            "otp_success_rate_customer": 0.9,
             "past_fraud_count_customer": 0,
             "past_disputes_customer": 0,
             "merchant_historical_fraud_rate": merchant_hist_fraud,
@@ -72,20 +83,129 @@ def render_live_scoring(scorer, threshold: float):
         label, action = scorer.predict_label_and_action(df_input)
 
         st.markdown("---")
-        st.subheader("Risk Assessment Output")
 
-        colA, colB = st.columns([1, 2])
+        # 2. Dynamic Alert Banners
+        if label == 1:
+            st.error(f"🚨 **HIGH RISK DETECTED: {action}** | Fraud Probability: {prob:.2%}", icon="🚨")
+        elif prob >= (threshold * 0.5):
+            st.warning(f"⚠️ **ELEVATED RISK: {action}** | Fraud Probability: {prob:.2%}", icon="⚠️")
+        else:
+            st.success(f"✅ **TRANSACTION APPROVED: {action}** | Fraud Probability: {prob:.2%}", icon="✅")
+
+        # 3. Visual Outcome Layout
+        colA, colB = st.columns([1, 1.5])
 
         with colA:
-            st.metric("Fraud Probability", f"{prob:.2%}")
-            st.metric("Decision Threshold", f"{threshold:.3f}")
-            st.metric("Model Label", "FRAUD" if label == 1 else "GENUINE")
-            st.metric("Recommended Action", action)
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            # Formatted without deep indentation to prevent the Markdown "code block" bug
+            action_color = "#ef4444" if label == 1 else "#10b981"
+            html_content = (
+                f"<b>Model Output:</b> {prob:.2%} Probability<br><br>"
+                f"<b>Strict Threshold:</b> {threshold:.3f}<br><br>"
+                f"<b>System Action:</b> <span style='color: {action_color}; font-weight: bold;'>{action}</span>"
+            )
+            
+            info_card(
+                "Decision Parameters",
+                html_content,
+                accent="warning" if label == 1 else "primary"
+            )
 
         with colB:
-            fig = go.Figure(go.Indicator(
-                mode="gauge+number",
+            # Styled Gauge Chart
+            fig_gauge = go.Figure(go.Indicator(
+                mode="gauge+number+delta",
                 value=prob * 100,
-                gauge={"axis": {"range": [0, 100]}}
+                domain={'x': [0, 1], 'y': [0, 1]},
+                title={'text': "Fraud Risk Score", 'font': {'size': 24}},
+                delta={'reference': threshold * 100, 'increasing': {'color': "red"}, 'decreasing': {'color': "green"}},
+                gauge={
+                    'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "white"},
+                    'bar': {'color': "#ef4444" if label == 1 else "#10b981"},
+                    'bgcolor': "rgba(0,0,0,0)",
+                    'borderwidth': 2,
+                    'bordercolor': "gray",
+                    'steps': [
+                        {'range': [0, threshold * 100], 'color': "rgba(16, 185, 129, 0.2)"},
+                        {'range': [threshold * 100, 100], 'color': "rgba(239, 68, 68, 0.2)"}
+                    ],
+                    'threshold': {
+                        'line': {'color': "red", 'width': 4},
+                        'thickness': 0.75,
+                        'value': threshold * 100
+                    }
+                }
             ))
-            st.plotly_chart(fig, use_container_width=True)
+            fig_gauge.update_layout(height=280, margin=dict(l=20, r=20, t=50, b=20), paper_bgcolor="rgba(0,0,0,0)", font={'color': "white"})
+            st.plotly_chart(fig_gauge, use_container_width=True)
+
+        # 4. Explainable AI (Data-Driven Marginal Contribution)
+        st.subheader("Model Decision Drivers (Explainability)")
+        st.caption("Visualizing the exact mathematical impact of key features on the final risk score using marginal feature substitution.")
+        
+        # --- REAL EXPLAINABILITY LOGIC ---
+        # 1. Define "Safe/Normal" baselines for the most volatile features
+        safe_baselines = {
+            "ip_address_risk_score": 0.0,
+            "device_trust_score": 1.0,
+            "amount": 500.0,  # A typical safe transaction amount
+            "txn_count_last_24h": 1,
+            "merchant_historical_fraud_rate": 0.01
+        }
+        
+        # 2. Calculate the "Baseline Probability" if all these features were completely normal
+        df_safe = df_input.copy()
+        for feature, safe_val in safe_baselines.items():
+            df_safe[feature] = safe_val
+        
+        base_prob = scorer.predict_proba(df_safe)
+        
+        # 3. Calculate the isolated impact of each feature
+        impacts = {}
+        for feature, safe_val in safe_baselines.items():
+            # Create a profile where ONLY this feature has its current (potentially risky) value
+            df_temp = df_safe.copy()
+            df_temp[feature] = df_input[feature].iloc[0] 
+            
+            # Score it
+            prob_with_feature = scorer.predict_proba(df_temp)
+            
+            # The impact is how much this specific feature shifted the score from the safe baseline
+            impact = prob_with_feature - base_prob
+            impacts[feature] = impact
+            
+        # 4. Sort drivers by their absolute impact to find the most important ones
+        sorted_impacts = sorted(impacts.items(), key=lambda x: abs(x[1]), reverse=True)
+        top_drivers = sorted_impacts[:3] # Take the top 3 biggest movers
+        
+        # 5. Calculate "Other Factors" to make the math add up perfectly to the final probability
+        explained_sum = sum([imp for _, imp in top_drivers])
+        other_impact = prob - (base_prob + explained_sum)
+        
+        # --- BUILD DYNAMIC WATERFALL CHART ---
+        x_values = [base_prob] + [imp for _, imp in top_drivers] + [other_impact, prob]
+        y_labels = ["Safe Baseline"] + [f.replace("_", " ").title() for f, _ in top_drivers] + ["Other Interactions", "Final Score"]
+        measures = ["absolute"] + ["relative"] * len(top_drivers) + ["relative", "total"]
+        
+        fig_waterfall = go.Figure(go.Waterfall(
+            name="Risk Drivers", orientation="h",
+            measure=measures,
+            y=y_labels,
+            x=x_values,
+            connector={"line": {"color": "rgb(63, 63, 63)"}},
+            decreasing={"marker": {"color": "#10b981"}}, # Green if it lowered risk
+            increasing={"marker": {"color": "#ef4444"}}, # Red if it increased risk
+            totals={"marker": {"color": "#4C8BF5"}}
+        ))
+        
+        fig_waterfall.update_layout(
+            height=350, 
+            margin=dict(l=10, r=20, t=30, b=10),
+            plot_bgcolor="rgba(0,0,0,0)", 
+            paper_bgcolor="rgba(0,0,0,0)",
+            yaxis=dict(autorange="reversed")
+        )
+        fig_waterfall.update_xaxes(tickformat=',.1%')
+        
+        st.plotly_chart(fig_waterfall, use_container_width=True)
