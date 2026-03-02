@@ -28,8 +28,7 @@ Fraud in digital payments often represents less than 0.5% of total transaction v
 
 ## 🖥️ Dashboard Walkthrough
 
-*(Tip: Add a GIF or screenshot of your Streamlit app here!)*
-`![App Demo](docs/demo.gif)`
+`![App Dashboard](reports/dashboard.png)`
 
 1. **Overview:** High-level KPIs, log-scaled financial outlier analysis, and fraud distribution across payment rails.
 2. **Live Scoring:** Simulate real-time transactions with dynamic alert banners and pseudo-SHAP waterfall charts explaining the model's exact mathematical drivers.
