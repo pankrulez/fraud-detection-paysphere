@@ -14,6 +14,8 @@ from app.live_view import render_live_scoring
 from app.analytics_view import render_analytics
 from app.pipeline_view import render_pipeline
 
+API_URL = os.getenv("API_URL", "http://localhost:8000").rstrip("/")
+
 st.set_page_config(
     page_title="PaySphere Risk Intelligence",
     page_icon="🛡️",
@@ -57,8 +59,8 @@ class APIFraudScorer:
     Acts as a proxy for the ML model. The Streamlit views think they are talking 
     to a local model, but this actually routes the data to our FastAPI backend.
     """
-    def __init__(self, threshold=0.5):
-        self.api_url = os.getenv("API_URL", "http://localhost:8000")
+    def __init__(self, api_url, threshold=0.5):
+        self.api_url = api_url
         self.threshold = threshold
 
     def predict_label_and_action(self, df_txn: pd.DataFrame):
@@ -123,10 +125,11 @@ with st.sidebar:
 
     # API Health Check Indicator
     try:
-        health = requests.get("http://localhost:8000/health", timeout=1)
+        # Use the dynamic API_URL and increase timeout to 5s for Render cold starts
+        health = requests.get(f"{API_URL}/health", timeout=5)
         api_status = "🟢 Active & Scoring" if health.status_code == 200 else "🔴 API Error"
         bg_color, border_color, text_color = ("#064e3b", "#047857", "#34d399") if health.status_code == 200 else ("#7f1d1d", "#991b1b", "#fca5a5")
-    except:
+    except Exception as e:
         api_status = "🔴 API Offline"
         bg_color, border_color, text_color = ("#7f1d1d", "#991b1b", "#fca5a5")
 
@@ -180,7 +183,7 @@ with st.sidebar:
 # MAIN CONTENT ROUTING
 # =========================
 # Initialize our new API proxy instead of the heavy local model
-scorer = APIFraudScorer(threshold=threshold)
+scorer = APIFraudScorer(api_url=API_URL, threshold=threshold)
 
 if st.session_state.section == "Overview":
     render_overview(load_sample_data, scorer)
