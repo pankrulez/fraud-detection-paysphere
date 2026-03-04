@@ -4,14 +4,16 @@ import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 from app.ui_components import chart_card, info_card
+from app.ui_components import render_threshold_explanation
 
 def render_live_scoring(scorer, threshold: float):
 
-    st.title("Real-Time Risk Scoring Console")
+    st.title("⚡ Real-Time Risk Scoring")
     st.markdown(
         "Simulate incoming transactions and observe the model's probability score, "
         "risk classification, and operational decision in real-time."
     )
+    render_threshold_explanation(threshold)
     st.markdown("---")
 
     # ==========================================
@@ -45,17 +47,17 @@ def render_live_scoring(scorer, threshold: float):
     if submitted:
         
         # 1. The "Wow" Factor: Simulate heavy processing
-        with st.spinner("Intercepting transaction... Analyzing 20+ behavioral signals..."):
-            time.sleep(1.2) # Adds dramatic effect for the presentation
+        with st.spinner("Intercepting transaction... Routing to FastAPI Risk Engine..."):
+            time.sleep(0.5) # Reduced slightly since API call adds real latency
 
         now = datetime.now()
 
-        # Build Dataframe
+        # Build Dataframe matching the exact Pydantic schema of our API
         df_input = pd.DataFrame([{
-            "transaction_id": 999999,
-            "customer_id": 10234,
-            "device_id": 5555,
-            "merchant_id": 111,
+            "transaction_id": "TXN_999999", # Note: API expects strings for IDs now
+            "customer_id": "CUST_10234",
+            "device_id": "DEV_5555",
+            "merchant_id": "MERCH_111",
             "timestamp": now.isoformat(),
             "amount": amount,
             "payment_method": payment_method,
@@ -64,30 +66,26 @@ def render_live_scoring(scorer, threshold: float):
             "ip_address_risk_score": ip_risk,
             "device_trust_score": device_trust,
             "txn_count_last_24h": txn_count_24h,
-            "avg_amount_last_24h": 500,
-            "merchant_diversity_last_7d": 3,
-            "device_change_flag": 1 if device_trust < 0.5 else 0,
             "location_change_flag": 1 if ip_risk > 0.7 else 0,
-            "authentication_method": "OTP",
             "otp_success_rate_customer": 0.9,
             "past_fraud_count_customer": 0,
             "past_disputes_customer": 0,
             "merchant_historical_fraud_rate": merchant_hist_fraud,
             "hour_of_day": now.hour,
-            "day_of_week": now.weekday(),
             "is_weekend": 1 if now.weekday() >= 5 else 0,
-            "is_fraud": 0,
+            "ip_address_country_match": 1,
+            "customer_tenure_days": 365
         }])
 
-        prob = scorer.predict_proba(df_input)
-        label, action = scorer.predict_label_and_action(df_input)
+        # [FIX] Unpack all three values from the new API Proxy method
+        label, action, prob = scorer.predict_label_and_action(df_input)
 
         st.markdown("---")
 
         # 2. Dynamic Alert Banners
-        if label == 1:
+        if action == "HARD_BLOCK":
             st.error(f"🚨 **HIGH RISK DETECTED: {action}** | Fraud Probability: {prob:.2%}", icon="🚨")
-        elif prob >= (threshold * 0.5):
+        elif action in ["MANUAL_REVIEW", "OTP_VERIFICATION"]:
             st.warning(f"⚠️ **ELEVATED RISK: {action}** | Fraud Probability: {prob:.2%}", icon="⚠️")
         else:
             st.success(f"✅ **TRANSACTION APPROVED: {action}** | Fraud Probability: {prob:.2%}", icon="✅")
@@ -98,7 +96,6 @@ def render_live_scoring(scorer, threshold: float):
         with colA:
             st.markdown("<br>", unsafe_allow_html=True)
             
-            # Formatted without deep indentation to prevent the Markdown "code block" bug
             action_color = "#ef4444" if label == 1 else "#10b981"
             html_content = (
                 f"<b>Model Output:</b> {prob:.2%} Probability<br><br>"
@@ -140,50 +137,40 @@ def render_live_scoring(scorer, threshold: float):
             fig_gauge.update_layout(height=280, margin=dict(l=20, r=20, t=50, b=20), paper_bgcolor="rgba(0,0,0,0)", font={'color': "white"})
             st.plotly_chart(fig_gauge, use_container_width=True)
 
-        # 4. Explainable AI (Data-Driven Marginal Contribution)
+        # 4. Explainable AI (Data-Driven Marginal Contribution via Proxy)
         st.subheader("Model Decision Drivers (Explainability)")
-        st.caption("Visualizing the exact mathematical impact of key features on the final risk score using marginal feature substitution.")
+        st.caption("Visualizing the exact mathematical impact of key features on the final risk score using marginal feature substitution via API.")
         
-        # --- REAL EXPLAINABILITY LOGIC ---
-        # 1. Define "Safe/Normal" baselines for the most volatile features
         safe_baselines = {
             "ip_address_risk_score": 0.0,
             "device_trust_score": 1.0,
-            "amount": 500.0,  # A typical safe transaction amount
+            "amount": 500.0,  
             "txn_count_last_24h": 1,
             "merchant_historical_fraud_rate": 0.01
         }
         
-        # 2. Calculate the "Baseline Probability" if all these features were completely normal
         df_safe = df_input.copy()
         for feature, safe_val in safe_baselines.items():
             df_safe[feature] = safe_val
         
+        # Use predict_proba via the proxy
         base_prob = scorer.predict_proba(df_safe)
         
-        # 3. Calculate the isolated impact of each feature
         impacts = {}
         for feature, safe_val in safe_baselines.items():
-            # Create a profile where ONLY this feature has its current (potentially risky) value
             df_temp = df_safe.copy()
             df_temp[feature] = df_input[feature].iloc[0] 
             
-            # Score it
             prob_with_feature = scorer.predict_proba(df_temp)
-            
-            # The impact is how much this specific feature shifted the score from the safe baseline
             impact = prob_with_feature - base_prob
             impacts[feature] = impact
             
-        # 4. Sort drivers by their absolute impact to find the most important ones
         sorted_impacts = sorted(impacts.items(), key=lambda x: abs(x[1]), reverse=True)
-        top_drivers = sorted_impacts[:3] # Take the top 3 biggest movers
+        top_drivers = sorted_impacts[:3] 
         
-        # 5. Calculate "Other Factors" to make the math add up perfectly to the final probability
         explained_sum = sum([imp for _, imp in top_drivers])
         other_impact = prob - (base_prob + explained_sum)
         
-        # --- BUILD DYNAMIC WATERFALL CHART ---
         x_values = [base_prob] + [imp for _, imp in top_drivers] + [other_impact, prob]
         y_labels = ["Safe Baseline"] + [f.replace("_", " ").title() for f, _ in top_drivers] + ["Other Interactions", "Final Score"]
         measures = ["absolute"] + ["relative"] * len(top_drivers) + ["relative", "total"]
@@ -194,8 +181,8 @@ def render_live_scoring(scorer, threshold: float):
             y=y_labels,
             x=x_values,
             connector={"line": {"color": "rgb(63, 63, 63)"}},
-            decreasing={"marker": {"color": "#10b981"}}, # Green if it lowered risk
-            increasing={"marker": {"color": "#ef4444"}}, # Red if it increased risk
+            decreasing={"marker": {"color": "#10b981"}}, 
+            increasing={"marker": {"color": "#ef4444"}}, 
             totals={"marker": {"color": "#4C8BF5"}}
         ))
         

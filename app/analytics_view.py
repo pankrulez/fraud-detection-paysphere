@@ -1,207 +1,144 @@
-import os
 import streamlit as st
 import plotly.express as px
 import pandas as pd
-import plotly.graph_objects as go
 import numpy as np
-import plotly.figure_factory as ff
-from sklearn.metrics import precision_recall_curve, average_precision_score, roc_curve, auc
-from app.ui_components import chart_card
+from datetime import datetime
+from app.ui_components import render_threshold_explanation
 
 def render_analytics(load_sample_data_fn, show_raw: bool, threshold: float, scorer):
+    # 1. STYLE INJECTION (Dull Card Gradients)
+    st.markdown("""
+        <style>
+        [data-testid="stMetricValue"] { font-size: 28px; font-weight: 700; color: #F8FAFC; }
+        div[data-testid="column"] {
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+            padding: 20px; border-radius: 12px; border: 1px solid #334155;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-    df = load_sample_data_fn()
+    # 2. DATA PREP (Using the API Proxy)
+    if 'scored_df' not in st.session_state:
+        df_raw = load_sample_data_fn()
+        
+        sample_to_score = df_raw.head(500).copy()
+        
+        # --- SCHEMA ALIGNMENT ---
+        # Ensure the batch data perfectly matches the Pydantic API expectations
+        
+        # 1. Ensure required string/ID fields exist
+        if "customer_id" not in sample_to_score.columns: sample_to_score["customer_id"] = "CUST_X"
+        if "device_id" not in sample_to_score.columns: sample_to_score["device_id"] = "DEV_X"
+        if "merchant_id" not in sample_to_score.columns: sample_to_score["merchant_id"] = "MERCH_X"
+        if "timestamp" not in sample_to_score.columns: sample_to_score["timestamp"] = datetime.utcnow().isoformat()
+        
+        # 2. Ensure required numeric fields exist
+        defaults = {
+            "is_international": 0, "is_weekend": 0, "past_fraud_count_customer": 0,
+            "past_disputes_customer": 0, "txn_count_last_24h": 0, "customer_tenure_days": 0,
+            "location_change_flag": 0, "otp_success_rate_customer": 1.0, 
+            "ip_address_country_match": 1, "hour_of_day": 12, "day_of_week": 3,
+            "merchant_historical_fraud_rate": 0.05, "ip_address_risk_score": 0.1,
+            "device_trust_score": 0.9, "amount": 100.0, "payment_method": "credit_card",
+            "merchant_category": "retail"
+        }
+        for col, default_val in defaults.items():
+            if col not in sample_to_score.columns:
+                sample_to_score[col] = default_val
 
-    st.title("Model Performance & Risk Analytics")
-    st.markdown("Comprehensive evaluation of classification quality, financial impact, and behavioral signals.")
+        # Ensure string types for categories to avoid float/int typing errors
+        sample_to_score['payment_method'] = sample_to_score['payment_method'].astype(str)
+        sample_to_score['merchant_category'] = sample_to_score['merchant_category'].astype(str)
+        sample_to_score['customer_id'] = sample_to_score['customer_id'].astype(str)
+        sample_to_score['device_id'] = sample_to_score['device_id'].astype(str)
+        sample_to_score['merchant_id'] = sample_to_score['merchant_id'].astype(str)
+
+        # -------------------------
+
+        with st.spinner("Scoring batch data via API..."):
+            probabilities = []
+            for i in range(len(sample_to_score)):
+                row_df = sample_to_score.iloc[[i]] 
+                prob = scorer.predict_proba(row_df)
+                probabilities.append(prob)
+                
+            sample_to_score['model_probability'] = probabilities
+            st.session_state.scored_df = sample_to_score
+
+    df = st.session_state.scored_df
+    df['predicted_fraud'] = (df['model_probability'] >= threshold).astype(int)
+
+    # 3. GRADIENT CARDS: FINANCIAL SIMULATOR
+    st.title("📊 Fraud Analytics & Business Impact")
+    render_threshold_explanation(threshold)
+    s1, s2, s3 = st.columns(3)
+    
+    saved = df[(df['predicted_fraud'] == 1) & (df['is_fraud'] == 1)]['amount'].sum()
+    loss = df[(df['predicted_fraud'] == 0) & (df['is_fraud'] == 1)]['amount'].sum()
+    friction = df[(df['predicted_fraud'] == 1) & (df['is_fraud'] == 0)]['amount'].sum()
+
+    s1.metric(
+        "Fraud Prevented", 
+        f"₹{saved:,.0f}", 
+        help="The total value of confirmed fraudulent transactions successfully blocked by the model. This represents direct capital loss prevention."
+        )
+    s2.metric(
+        "Fraud Missed", 
+        f"₹{loss:,.0f}", 
+        delta_color="inverse",
+        help="The value of fraudulent transactions that the model failed to flag (False Negatives). This is the direct cost of 'leaked' fraud."
+        )
+    s3.metric(
+        "Friction Cost", 
+        f"₹{friction:,.0f}", 
+        delta_color="inverse",
+        help="The revenue at risk from genuine customers whose transactions were flagged as suspicious (False Positives). High friction can lead to customer churn."
+        )
+
     st.markdown("---")
 
-    # =============================
-    # MODEL SCORING
-    # =============================
-    proba = scorer.predict_proba(df)
+    # Row 1: Category & Amount
+    r1_col1, r1_col2 = st.columns(2)
+    with r1_col1:
+        cat_data = df.groupby('merchant_category')['is_fraud'].mean().reset_index()
+        fig1 = px.bar(cat_data, x='merchant_category', y='is_fraud', 
+                      title="Fraud Rate by Category", color='is_fraud', 
+                      color_continuous_scale='Viridis')
+        st.plotly_chart(fig1, use_container_width=True)
+    with r1_col2:
+        fig2 = px.violin(df, x="is_fraud", y="amount", box=True, 
+                         color="is_fraud", color_discrete_sequence=['#3B82F6', '#EF4444'],
+                         title="Amount Distribution")
+        st.plotly_chart(fig2, use_container_width=True)
 
-    if len(proba.shape) == 2:
-        df["model_probability"] = proba[:, 1]
-    else:
-        df["model_probability"] = proba
+    # Row 2: Method & Risk Correlation
+    r2_col1, r2_col2 = st.columns(2)
+    with r2_col1:
+        method_data = df.groupby('payment_method')['is_fraud'].mean().reset_index()
+        fig3 = px.bar(method_data, x='payment_method', y='is_fraud', 
+                      title="Fraud Rate by Method", color='payment_method',
+                      color_discrete_sequence=px.colors.qualitative.Pastel)
+        st.plotly_chart(fig3, use_container_width=True)
+    with r2_col2:
+        corrs = df.select_dtypes(include=[np.number]).corr()['is_fraud'].drop('is_fraud', errors='ignore').sort_values()
+        fig4 = px.bar(x=corrs.values, y=corrs.index, orientation='h', 
+                      title="Risk Signal Strength", color=corrs.values,
+                      color_continuous_scale='RdBu_r')
+        st.plotly_chart(fig4, use_container_width=True)
 
-    df["predicted_fraud"] = (df["model_probability"] >= threshold).astype(int)
+    # Row 3: Risk Clustering & Velocity
+    r3_col1, r3_col2 = st.columns(2)
+    with r3_col1:
+        fig5 = px.scatter(df, x="ip_address_risk_score", y="device_trust_score", 
+                          color="is_fraud", title="Risk Clustering",
+                          color_discrete_sequence=['#3B82F6', '#EF4444'], opacity=0.6)
+        st.plotly_chart(fig5, use_container_width=True)
+    with r3_col2:
+        fig6 = px.histogram(df, x="txn_count_last_24h", color="is_fraud", 
+                            barmode="group", title="24h Velocity Impact",
+                            color_discrete_sequence=['#3B82F6', '#EF4444'])
+        st.plotly_chart(fig6, use_container_width=True)
 
-    # Core Metrics
-    y_true = df["is_fraud"]
-    y_scores = df["model_probability"]
-    y_pred = df["predicted_fraud"]
-
-    tp = df[(y_pred == 1) & (y_true == 1)].shape[0]
-    tn = df[(y_pred == 0) & (y_true == 0)].shape[0]
-    fp = df[(y_pred == 1) & (y_true == 0)].shape[0]
-    fn = df[(y_pred == 0) & (y_true == 1)].shape[0]
-
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
-
-    # =============================
-    # FINANCIAL IMPACT SIMULATOR
-    # =============================
-    st.markdown("### 💰 Financial Impact Simulator")
-    st.caption("Real-time calculation of business value based on the selected decision threshold in the sidebar.")
-    
-    # Calculate exact financial impact using the 'amount' column
-    saved_amount = df[(y_pred == 1) & (y_true == 1)]["amount"].sum()
-    loss_amount = df[(y_pred == 0) & (y_true == 1)]["amount"].sum()
-    friction_amount = df[(y_pred == 1) & (y_true == 0)]["amount"].sum()
-    
-    f1, f2, f3 = st.columns(3)
-    
-    with f1:
-        with st.container(border=True):
-            st.metric("🛡️ Fraud Prevented (Saved)", f"₹{saved_amount:,.0f}", help="True Positives * Transaction Amount")
-    with f2:
-        with st.container(border=True):
-            st.metric("💸 Fraud Missed (Loss)", f"₹{loss_amount:,.0f}", delta_color="inverse", help="False Negatives * Transaction Amount")
-    with f3:
-        with st.container(border=True):
-            st.metric("⚠️ Genuine Blocked (Friction)", f"₹{friction_amount:,.0f}", delta_color="inverse", help="False Positives * Transaction Amount")
-        
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # =============================
-    # PERFORMANCE SUMMARY
-    # =============================
-    k1, k2, k3, k4 = st.columns(4)
-    k1.metric("Precision", f"{precision:.2%}")
-    k2.metric("Recall", f"{recall:.2%}")
-    k3.metric("True Positives", tp)
-    k4.metric("False Positives", fp)
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # =============================
-    # ROW 1: OUTCOMES & DISTRIBUTION
-    # =============================
-    col_a, col_b = st.columns(2)
-
-    with col_a:
-        matrix = np.array([[tn, fp], [fn, tp]])
-        fig_cm = ff.create_annotated_heatmap(
-            z=matrix, x=["Pred Genuine", "Pred Fraud"], y=["Actual Genuine", "Actual Fraud"],
-            colorscale="Blues", showscale=False
-        )
-        chart_card("Confusion Matrix", f"Evaluated at threshold: {threshold:.3f}", fig_cm, accent="primary", height=320)
-
-    with col_b:
-        fig1 = px.histogram(df, x="model_probability", color="is_fraud", nbins=50, barmode="overlay")
-        fig1.add_vline(x=threshold, line_dash="dash", line_color="red", annotation_text="Threshold")
-        chart_card("Probability Distribution", "Separation between genuine and fraud scores.", fig1, accent="info", height=320)
-
-    # =============================
-    # ROW 2: DATA SCIENCE CURVES & GLOBAL IMPORTANCE
-    # =============================
-    col_c, col_d = st.columns(2)
-
-    with col_c:
-        # Precision-Recall Curve
-        precision_vals, recall_vals, _ = precision_recall_curve(y_true, y_scores)
-        pr_auc = average_precision_score(y_true, y_scores)
-        
-        fig_pr = go.Figure()
-        fig_pr.add_trace(go.Scatter(x=recall_vals, y=precision_vals, mode='lines', name=f'PR (AUC = {pr_auc:.3f})', line=dict(color='#10b981', width=3)))
-        fig_pr.update_layout(xaxis_title='Recall', yaxis_title='Precision', margin=dict(t=10, b=10, l=10, r=10))
-        
-        chart_card("Precision-Recall Curve", f"Average Precision: {pr_auc:.3f}. Crucial metric for imbalanced data.", fig_pr, accent="success", height=320)
-
-    with col_d:
-        # Dynamically build the path to the processed data (from app/ to data/processed/)
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.abspath(os.path.join(current_dir, ".."))
-        processed_data_path = os.path.join(project_root, "data", "processed", "transactions_features.csv")
-        
-        try:
-            # Load the fully engineered numeric dataset
-            features_df = pd.read_csv(processed_data_path)
-            
-            # Calculate correlation against the actual 'is_fraud' label
-            corr = features_df.corrwith(features_df["is_fraud"]).drop("is_fraud", errors="ignore").fillna(0)
-            
-            # Get the top 8 most highly correlated features
-            top_corr = corr.abs().sort_values(ascending=False).head(8).index
-            plot_data = corr[top_corr].sort_values(ascending=True)
-            
-            fig_imp = go.Figure(go.Bar(
-                x=plot_data.values,
-                y=[str(x).replace("_", " ").title() for x in plot_data.index],
-                orientation='h',
-                marker=dict(
-                    color=plot_data.values,
-                    colorscale="RdBu_r",
-                    cmin=-0.6, cmax=0.6, # Locks 0 exactly in the center (white)
-                    colorbar=dict(title="Correlation")
-                )
-            ))
-            
-            fig_imp.update_layout(
-                xaxis_title="Correlation with Fraud Label", 
-                yaxis_title="", 
-                margin=dict(t=10, b=10, l=10, r=10),
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)"
-            )
-            
-            chart_card("Global Feature Drivers", "Top engineered features driving fraud.", fig_imp, accent="warning", height=320)
-            
-        except FileNotFoundError:
-            st.error(f"Could not find {processed_data_path}. Please check the file path.")      
-        
-    # =============================
-    # ROW 3: BEHAVIORAL INSIGHTS
-    # =============================
-    col_e, col_f = st.columns(2)
-
-    with col_e:
-        tmp_hour = df.groupby("hour_of_day")["is_fraud"].mean().reset_index()
-        fig4 = px.line(tmp_hour, x="hour_of_day", y="is_fraud", markers=True)
-        fig4.update_yaxes(tickformat=',.1%')
-        chart_card("Risk by Hour", "Average fraud rate across the 24-hour cycle.", fig4, accent="neutral", height=320)
-
-    with col_f:
-        pivot = df.groupby(["hour_of_day", "payment_method"])["is_fraud"].mean().reset_index()
-        fig5 = px.density_heatmap(pivot, x="hour_of_day", y="payment_method", z="is_fraud", color_continuous_scale="Reds")
-        chart_card("Fraud Heatmap", "Risk clusters by hour and payment method.", fig5, accent="neutral", height=320)
-
-    # =============================
-    # ACTIONABILITY & RAW DATA
-    # =============================
     if show_raw:
-        st.markdown("---")
-        st.markdown("### 📋 Operational Action: Review Flagged Transactions")
-        st.caption("Export the transactions isolated by the model for manual review by the fraud team.")
-        
-        # Filter for transactions the model flagged as fraud based on the current threshold
-        flagged_df = df[df["predicted_fraud"] == 1].copy()
-        
-        if not flagged_df.empty:
-            st.warning(f"⚠️ **{len(flagged_df):,}** transactions flagged as fraud at the current threshold ({threshold:.3f}).")
-            
-            # Convert dataframe to CSV for the download button
-            csv = flagged_df.to_csv(index=False).encode('utf-8')
-            
-            st.download_button(
-                label="📥 Download Flagged Transactions (CSV)",
-                data=csv,
-                file_name=f"flagged_fraud_txns_threshold_{threshold:.3f}.csv",
-                mime="text/csv",
-                type="primary",
-                use_container_width=True
-            )
-        else:
-            st.success("✅ No transactions flagged as fraud at the current threshold.")
-            
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        # Display the styled raw sample
-        st.markdown("### Sample Scored Data")
-        styled_df = df.head(50).style\
-            .background_gradient(cmap="Reds", subset=["model_probability", "ip_address_risk_score"])\
-            .highlight_max(subset=["is_fraud"], color="#7f1d1d")\
-            .format({"model_probability": "{:.2%}", "amount": "₹{:,.2f}", "ip_address_risk_score": "{:.2f}"})
-        st.dataframe(styled_df, use_container_width=True)
+        st.dataframe(df[df['predicted_fraud'] == 1], use_container_width=True)

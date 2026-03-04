@@ -64,3 +64,38 @@ def info_card(title, content_html, accent="primary"):
                 {content_html}
             </div>
         """, unsafe_allow_html=True)
+        
+
+def render_threshold_explanation(threshold):
+    """
+    Translates technical thresholds into business strategy with explicit bounds.
+    """
+    if threshold < 0.03:
+        posture = "🛡️ Aggressive Protection"
+        bounds = "Threshold < 0.030"
+        description = "Prioritizing maximum fraud capture. Ideal for high-risk periods or identifying subtle botnet patterns."
+    elif threshold > 0.149:
+        posture = "🚀 Growth Focused"
+        description = "Prioritizing seamless customer journeys. Ideal for low-risk scenarios or major sales events to maximize conversion."
+        bounds = "Threshold > 0.149"
+    else:
+        posture = "⚖️ Balanced Risk"
+        description = "The 'Golden Mean'. Optimizing the trade-off between stopping thieves and serving honest customers."
+        bounds = "0.030 ≤ Threshold ≤ 0.149"
+
+    st.markdown(f"""
+        <div style="background: rgba(59, 130, 246, 0.1); padding: 20px; border-radius: 12px; 
+                    border-left: 5px solid #3B82F6; margin-bottom: 25px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h4 style="margin:0; color: #60A5FA;">Current Strategy: {posture}</h4>
+                <span style="background: #1E293B; color: #3B82F6; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; border: 1px solid #3B82F6;">
+                    {bounds}
+                </span>
+            </div>
+            <p style="margin:10px 0 8px 0; color: #CBD5E1; font-size: 0.95rem; line-height: 1.4;">{description}</p>
+            <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
+                <span style="color: #94A3B8; font-size: 0.85rem;">Active Sensitivity: </span>
+                <span style="color: #F8FAFC; font-weight: 600; font-size: 0.85rem;">{threshold:.3f}</span>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)

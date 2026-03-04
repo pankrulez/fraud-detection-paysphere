@@ -2,62 +2,63 @@ import pandas as pd
 from typing import Tuple
 from src.logger import get_logger
 from src.utils.io_utils import load_model
-from src.features.feature_engineering import prepare_features
+from src.features.feature_engineering import engineer_behavioral_features
 
 logger = get_logger(__name__)
 
-
 class FraudScorer:
-    """
-    Wraps model + preprocessing for real-time scoring.
-    """
-
-    def __init__(
-        self,
-        model_path: str = "models/artifacts/fraud_model.joblib",
-        encoders_path: str = "models/encoders/preprocessing.joblib",
-        threshold: float = 0.5,
-    ):
-        self.model = load_model(model_path)
-        self.encoders = load_model(encoders_path)
-        self.threshold = threshold
+    def __init__(self, pipeline_path="models/artifacts/fraud_pipeline.joblib", threshold=0.5):
+        """
+        Loads the unified ImbPipeline (which handles scaling, OHE, and the model).
+        """
+        self.pipeline = load_model(pipeline_path)
+        self.threshold = threshold 
 
     def predict_proba(self, df_txn: pd.DataFrame) -> float:
         """
-        Given a single-transaction DataFrame, return fraud probability.
+        Engineers features and scores the transaction using the unified pipeline.
         """
-        X, _, _ = prepare_features(
-            df_txn.copy(),
-            target_col="is_fraud",  # will be dropped if absent
-            fit=False,
-            encoders=self.encoders,
-        )
-        prob = self.model.predict_proba(X)[:, 1][0]
-        logger.info(f"Fraud probability: {prob:.4f}")
-        return prob
+        try:
+            # 1. Engineer behavioral features
+            # NOTE: For a single-row live inference without a Feature Store, 
+            # historical aggregations will default to the current row's values.
+            X_engineered = engineer_behavioral_features(df_txn.copy())
+            
+            # 2. Drop identifiers (the pipeline expects raw feature columns only)
+            id_cols = ["transaction_id", "customer_id", "device_id", "merchant_id", "timestamp"]
+            X_model = X_engineered.drop(columns=id_cols, errors="ignore")
+            
+            # Safety check: ensure no target column slipped through
+            if "is_fraud" in X_model.columns:
+                X_model = X_model.drop(columns=["is_fraud"])
 
-    def predict_label_and_action(self, df_txn: pd.DataFrame) -> Tuple[int, str]:
+            # 3. Score the data 
+            # The unified pipeline automatically scales and encodes before predicting
+            prob = self.pipeline.predict_proba(X_model)[:, 1][0]
+            
+            logger.info(f"Transaction scored successfully. Probability: {prob:.4f}")
+            return prob
+            
+        except Exception as e:
+            logger.error(f"Error during prediction routing: {e}")
+            raise
+
+    def predict_label_and_action(self, df_txn: pd.DataFrame) -> Tuple[int, str, float]:
         """
-        Returns:
-            label: 1 = fraud, 0 = genuine
-            action: recommended operational action
+        Returns the binary label, the business action, and the raw probability.
         """
         p = self.predict_proba(df_txn)
         label = int(p >= self.threshold)
 
-        # Simple decision policy:
-        # - p >= 0.9: hard block
-        # - 0.7 <= p < 0.9: OTP challenge or manual review
-        # - 0.5 <= p < 0.7: soft review or step-up authentication
-        # - else: allow
-        if p >= 0.9:
-            action = "HARD_BLOCK"
-        elif p >= 0.7:
-            action = "OTP_CHALLENGE"
-        elif p >= 0.5:
-            action = "SOFT_REVIEW"
+        # Multi-Tiered Relative Policy based on risk severity
+        # Cap the extreme risk multiplier at 0.85 to prevent impossible thresholds
+        if p >= min(self.threshold * 5, 0.85):
+            action = "HARD_BLOCK"  # Extreme risk
+        elif p >= (self.threshold * 3):
+            action = "MANUAL_REVIEW" # High risk relative to baseline
+        elif p >= self.threshold:
+            action = "OTP_VERIFICATION" # Step-up authentication
         else:
-            action = "ALLOW"
-
-        logger.info(f"Predicted label={label}, action={action}")
-        return label, action
+            action = "ALLOW" # Safe transaction
+            
+        return label, action, p

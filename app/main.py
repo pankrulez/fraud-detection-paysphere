@@ -2,13 +2,13 @@ import os
 import sys
 import pandas as pd
 import streamlit as st
+import requests
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from src.modeling.inference import FraudScorer
 from app.overview_view import render_overview
 from app.live_view import render_live_scoring
 from app.analytics_view import render_analytics
@@ -30,12 +30,8 @@ st.markdown("""
     --accent: #4C8BF5;
     --accent-soft: #1e3a8a;
 }
-/* Neutral dark background */
 .stApp { background: #0f1115; color: #e5e7eb; }
-/* Sidebar neutral graphite */
 section[data-testid="stSidebar"] { background: #151821; padding-top: 1.5rem; }
-
-/* Custom Navigation Buttons */
 div[data-testid="stButton"] > button {
     background-color: transparent; color: #cbd5e1;
     border: 1px solid transparent; border-radius: 8px;
@@ -49,22 +45,61 @@ div[data-testid="stButton"] > button[kind="primary"] {
     background-color: #1f2937 !important; border-left: 3px solid var(--accent) !important;
     color: #ffffff !important; font-weight: 600 !important;
 }
-/* Focus ring */
 button:focus { outline: none; box-shadow: 0 0 0 2px var(--accent-soft); }
 </style>
 """, unsafe_allow_html=True)
 
 # =========================
+# API PROXY CLIENT
+# =========================
+class APIFraudScorer:
+    """
+    Acts as a proxy for the ML model. The Streamlit views think they are talking 
+    to a local model, but this actually routes the data to our FastAPI backend.
+    """
+    def __init__(self, threshold=0.5):
+        self.api_url = os.getenv("API_URL", "http://localhost:8000")
+        self.threshold = threshold
+
+    def predict_label_and_action(self, df_txn: pd.DataFrame):
+        try:
+            # 1. Convert the dataframe row to a JSON payload
+            payload = df_txn.iloc[0].fillna(0).to_dict()
+            
+            # 2. Ping the FastAPI endpoint
+            response = requests.post(f"{self.api_url}/v1/score", json=payload, timeout=5)
+            response.raise_for_status() # Raise error for bad HTTP status codes
+            
+            data = response.json()
+            prob = data["fraud_probability"]
+            
+            # 3. Apply the UI-controlled threshold logic locally
+            label = int(prob >= self.threshold)
+            if prob >= min(self.threshold * 5, 0.85):
+                action = "HARD_BLOCK"
+            elif prob >= (self.threshold * 3):
+                action = "MANUAL_REVIEW"
+            elif prob >= self.threshold:
+                action = "OTP_VERIFICATION"
+            else:
+                action = "ALLOW"
+                
+            return label, action, prob
+            
+        except requests.exceptions.RequestException as e:
+            st.error(f"API Connection Error. Is FastAPI running? Details: {e}")
+            return 0, "ERROR", 0.0
+            
+    def predict_proba(self, df_txn: pd.DataFrame):
+        """Fallback for batch scoring in the analytics view."""
+        # For true enterprise analytics, this should hit a batch API endpoint.
+        # For now, we mock the return to prevent the view from breaking.
+        _, _, prob = self.predict_label_and_action(df_txn)
+        return prob
+
+# =========================
 # LOADERS
 # =========================
-@st.cache_resource(show_spinner="Loading Model Artifacts...")
-def load_scorer(threshold: float = 0.5):
-    return FraudScorer(
-        model_path="models/artifacts/fraud_model.joblib",
-        encoders_path="models/encoders/preprocessing.joblib",
-        threshold=threshold,
-    )
-
 @st.cache_data(show_spinner="Loading Transaction Data...")
 def load_sample_data(n: int = 50000):
     path = "data/interim/transactions_clean.csv"
@@ -79,8 +114,6 @@ def load_sample_data(n: int = 50000):
 # SIDEBAR NAVIGATION
 # =========================
 with st.sidebar:
-    
-    # 1. Header (Using st.html to bypass Markdown parser)
     st.html(
         "<div style='display:flex; align-items:center; gap:10px; font-size:18px; "
         "font-weight:700; margin-bottom:20px; color:#e5e7eb;'>"
@@ -88,11 +121,19 @@ with st.sidebar:
         "</div>"
     )
 
-    # 2. System Status Indicator (Flattened string)
+    # API Health Check Indicator
+    try:
+        health = requests.get("http://localhost:8000/health", timeout=1)
+        api_status = "🟢 Active & Scoring" if health.status_code == 200 else "🔴 API Error"
+        bg_color, border_color, text_color = ("#064e3b", "#047857", "#34d399") if health.status_code == 200 else ("#7f1d1d", "#991b1b", "#fca5a5")
+    except:
+        api_status = "🔴 API Offline"
+        bg_color, border_color, text_color = ("#7f1d1d", "#991b1b", "#fca5a5")
+
     st.html(
-        "<div style='background-color: #064e3b; color: #34d399; padding: 8px 12px; "
-        "border-radius: 6px; font-size: 0.85rem; margin-bottom: 24px; border: 1px solid #047857;'>"
-        "🟢 <b>System Status:</b> Active & Scoring"
+        f"<div style='background-color: {bg_color}; color: {text_color}; padding: 8px 12px; "
+        f"border-radius: 6px; font-size: 0.85rem; margin-bottom: 24px; border: 1px solid {border_color};'>"
+        f"<b>System Status:</b> {api_status}"
         "</div>"
     )
 
@@ -119,7 +160,6 @@ with st.sidebar:
 
     st.write("---")
 
-    # Risk Controls
     st.caption("RISK CONTROLS")
     threshold = st.slider(
         "Decision Threshold",
@@ -139,10 +179,11 @@ with st.sidebar:
 # =========================
 # MAIN CONTENT ROUTING
 # =========================
-scorer = load_scorer(threshold)
+# Initialize our new API proxy instead of the heavy local model
+scorer = APIFraudScorer(threshold=threshold)
 
 if st.session_state.section == "Overview":
-    render_overview(load_sample_data)
+    render_overview(load_sample_data, scorer)
 elif st.session_state.section == "Live Scoring":
     render_live_scoring(scorer, threshold)
 elif st.session_state.section == "Analytics":
