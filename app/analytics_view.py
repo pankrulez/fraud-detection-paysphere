@@ -54,15 +54,11 @@ def render_analytics(load_sample_data_fn, show_raw: bool, threshold: float, scor
         sample_to_score['device_id'] = sample_to_score['device_id'].astype(str)
         sample_to_score['merchant_id'] = sample_to_score['merchant_id'].astype(str)
 
-        # -------------------------
+        # ---- API BATCH SCORING ---- #
 
-        with st.spinner("Scoring batch data via API..."):
-            probabilities = []
-            for i in range(len(sample_to_score)):
-                row_df = sample_to_score.iloc[[i]] 
-                prob = scorer.predict_proba(row_df)
-                probabilities.append(prob)
-                
+        with st.spinner("Scoring 500 transactions instantly via Batch API..."):
+            probabilities = scorer.predict_proba_batch(sample_to_score)
+            
             sample_to_score['model_probability'] = probabilities
             st.session_state.scored_df = sample_to_score
 

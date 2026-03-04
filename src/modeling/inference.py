@@ -42,6 +42,22 @@ class FraudScorer:
         except Exception as e:
             logger.error(f"Error during prediction routing: {e}")
             raise
+        
+    
+    def predict_proba_batch(self, df_batch: pd.DataFrame) -> list:
+        """Scores a whole batch of transactions instantly."""
+        try:
+            X_engineered = engineer_behavioral_features(df_batch.copy())
+            id_cols = ["transaction_id", "customer_id", "device_id", "merchant_id", "timestamp", "is_fraud"]
+            X_model = X_engineered.drop(columns=id_cols, errors="ignore")
+            
+            # Return all probabilities as a standard Python list
+            probs = self.pipeline.predict_proba(X_model)[:, 1]
+            return probs.tolist()
+        except Exception as e:
+            logger.error(f"Batch scoring error: {e}")
+            raise
+    
 
     def predict_label_and_action(self, df_txn: pd.DataFrame) -> Tuple[int, str, float]:
         """

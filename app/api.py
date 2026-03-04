@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 import pandas as pd
 from datetime import datetime
 import uuid
+from typing import List
 
 from src.modeling.inference import FraudScorer
 from src.logger import get_logger
@@ -112,3 +113,18 @@ async def get_fraud_score(txn: TransactionRequest):
     except Exception as e:
         logger.error(f"Error processing transaction: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal ML processing error.")
+    
+@app.post("/v1/batch-score")
+async def get_batch_score(txns: List[TransactionRequest]):
+    """Receives a batch of transactions and scores them in one go."""
+    try:
+        # Convert list of Pydantic models to a single DataFrame
+        df_txns = pd.DataFrame([t.model_dump() for t in txns])
+        
+        # Score the entire DataFrame at once
+        probs = scorer.predict_proba_batch(df_txns)
+        
+        return {"status": "success", "probabilities": probs}
+    except Exception as e:
+        logger.error(f"Batch error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Batch processing error.")

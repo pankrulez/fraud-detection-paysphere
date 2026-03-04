@@ -98,6 +98,21 @@ class APIFraudScorer:
         # For now, we mock the return to prevent the view from breaking.
         _, _, prob = self.predict_label_and_action(df_txn)
         return prob
+    
+    def predict_proba_batch(self, df_batch: pd.DataFrame):
+        """Sends a dataframe as a single JSON array to the batch endpoint."""
+        try:
+            # Convert dataframe to a list of dictionaries
+            payload = df_batch.fillna(0).to_dict(orient="records")
+            
+            # Make ONE request with a slightly longer timeout for the batch computation
+            response = requests.post(f"{self.api_url}/v1/batch-score", json=payload, timeout=15)
+            response.raise_for_status()
+            
+            return response.json()["probabilities"]
+        except requests.exceptions.RequestException as e:
+            st.error(f"Batch API Error: {e}")
+            return [0.0] * len(df_batch) # Fallback to prevent UI crash
 
 # =========================
 # LOADERS
