@@ -6,15 +6,20 @@ import uuid
 from typing import List
 
 from src.modeling.inference import FraudScorer
-from src.logger import get_logger
+from src.logger import get_logger, setup_logging
 
-logger = get_logger(__name__)
+setup_logging(default_path="config/logging.yaml")
+# logger = get_logger(__name__)
+logger = get_logger("fraud")
 
 app = FastAPI(
     title="PaySphere Risk API", 
     version="1.0.0",
     description="Real-time fraud scoring API for digital payments."
 )
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Risk Engine API is starting up...")
 
 # Initialize the scorer once on startup
 try:

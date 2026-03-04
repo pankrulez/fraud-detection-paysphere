@@ -77,4 +77,7 @@ class FraudScorer:
         else:
             action = "ALLOW" # Safe transaction
             
+        txn_id = df_txn['transaction_id'].iloc[0] if 'transaction_id' in df_txn.columns else "N/A"
+        logger.info(f"Scoring TXN: {txn_id} | Prob: {p:.4f} | Action: {action}")
+            
         return label, action, p

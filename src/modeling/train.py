@@ -2,6 +2,7 @@ import yaml
 import optuna
 import pandas as pd
 import numpy as np
+import datetime
 from sklearn.base import clone
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import average_precision_score
@@ -13,7 +14,8 @@ from src.utils.metrics_utils import compute_classification_metrics
 from src.data_ingestion.ingestion import ingest_and_validate
 from src.features.feature_engineering import engineer_behavioral_features, build_preprocessing_pipeline
 
-logger = get_logger(__name__)
+logger = get_logger("fraud")
+version = datetime.datetime.now().strftime("%Y%m%d-%H%M")
 
 def load_config(config_path: str = "config/config.yaml") -> dict:
     with open(config_path, "r") as f:
@@ -106,7 +108,8 @@ def train_pipeline(config_path: str = "config/config.yaml") -> None:
     final_pipeline.steps.append(('classifier', final_classifier))
     
     final_pipeline.fit(X_train, y_train)
-    logger.info("Final model training completed.")
+    
+    logger.info(f"V-{version} model training completed.")
 
     # 7. Evaluate on Out-of-Time Test Set
     y_prob = final_pipeline.predict_proba(X_test)[:, 1]
