@@ -121,7 +121,7 @@ This will ingest data, engineer features, apply SMOTE, train the classifier, and
 ```bash
 # Serves the model at http://localhost:8000
 
-python -m uvicorn src.api:app --reload
+python -m uvicorn app.api:app --reload
 ```
 
 3️⃣ **Start the Frontend (UI)**
@@ -129,7 +129,7 @@ python -m uvicorn src.api:app --reload
 ```bash
 # Connects to the API for real-time scoring
 
-streamlit run app/app.py
+streamlit run app/main.py
 ```
 
 ---

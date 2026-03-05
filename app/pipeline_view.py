@@ -3,7 +3,16 @@ import streamlit as st
 from app.ui_components import info_card
 
 def render_pipeline():
-    # 1. PREMIUM UI STYLING
+    # Force a check every time the tab is clicked
+    scorer = st.session_state.get('api_scorer')
+    
+    # show a small spinner to be sure it's running
+    if scorer:
+        is_online = scorer.check_api_health()
+    else:
+        is_online = False
+    
+    # 1. UI STYLING
     st.markdown("""
         <style>
         .pipeline-card {

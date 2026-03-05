@@ -16,41 +16,6 @@ from app.pipeline_view import render_pipeline
 
 API_URL = os.getenv("API_URL", "http://localhost:8000").rstrip("/")
 
-st.set_page_config(
-    page_title="PaySphere Risk Intelligence",
-    page_icon="🛡️",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-# =========================
-# CLEAN ENTERPRISE STYLING
-# =========================
-st.markdown("""
-<style>
-:root {
-    --accent: #4C8BF5;
-    --accent-soft: #1e3a8a;
-}
-.stApp { background: #0f1115; color: #e5e7eb; }
-section[data-testid="stSidebar"] { background: #151821; padding-top: 1.5rem; }
-div[data-testid="stButton"] > button {
-    background-color: transparent; color: #cbd5e1;
-    border: 1px solid transparent; border-radius: 8px;
-    height: 42px; text-align: left; font-weight: 500;
-    transition: all 0.2s ease-in-out; width: 100%;
-}
-div[data-testid="stButton"] > button:hover {
-    background-color: #1f2937; border-color: #334155; color: #ffffff;
-}
-div[data-testid="stButton"] > button[kind="primary"] {
-    background-color: #1f2937 !important; border-left: 3px solid var(--accent) !important;
-    color: #ffffff !important; font-weight: 600 !important;
-}
-button:focus { outline: none; box-shadow: 0 0 0 2px var(--accent-soft); }
-</style>
-""", unsafe_allow_html=True)
-
 # =========================
 # API PROXY CLIENT
 # =========================
@@ -122,6 +87,48 @@ class APIFraudScorer:
             return response.status_code == 200
         except:
             return False
+
+# Page Configuration
+st.set_page_config(
+    page_title="PaySphere Risk Intelligence",
+    page_icon="🛡️",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# SESSION STATE INITIALIZATION
+if 'api_scorer' not in st.session_state:
+    st.session_state.api_scorer = APIFraudScorer(api_url=API_URL)
+
+# =========================
+# CLEAN ENTERPRISE STYLING
+# =========================
+st.markdown("""
+<style>
+:root {
+    --accent: #4C8BF5;
+    --accent-soft: #1e3a8a;
+}
+.stApp { background: #0f1115; color: #e5e7eb; }
+section[data-testid="stSidebar"] { background: #151821; padding-top: 1.5rem; }
+div[data-testid="stButton"] > button {
+    background-color: transparent; color: #cbd5e1;
+    border: 1px solid transparent; border-radius: 8px;
+    height: 42px; text-align: left; font-weight: 500;
+    transition: all 0.2s ease-in-out; width: 100%;
+}
+div[data-testid="stButton"] > button:hover {
+    background-color: #1f2937; border-color: #334155; color: #ffffff;
+}
+div[data-testid="stButton"] > button[kind="primary"] {
+    background-color: #1f2937 !important; border-left: 3px solid var(--accent) !important;
+    color: #ffffff !important; font-weight: 600 !important;
+}
+button:focus { outline: none; box-shadow: 0 0 0 2px var(--accent-soft); }
+</style>
+""", unsafe_allow_html=True)
+
+
 
 # =========================
 # LOADERS

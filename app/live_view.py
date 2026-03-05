@@ -25,18 +25,51 @@ def render_live_scoring(scorer, threshold: float):
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            amount = st.number_input("Amount (₹)", 1.0, value=12500.0, step=500.0)
-            payment_method = st.selectbox("Payment Method", ["UPI", "CARD", "NETBANKING", "WALLET"])
-            merchant_category = st.selectbox("Merchant Category", ["Electronics", "Travel", "Fashion", "Gaming", "Grocery", "Utilities"])
+            amount = st.number_input(
+                "Amount (₹)", 
+                1.0, 
+                value=12500.0, 
+                step=500.0,
+                help="Higher amounts relative to the user's history increase the risk weight."
+                )
+            payment_method = st.selectbox(
+                "Payment Method", 
+                ["UPI", "CARD", "NETBANKING", "WALLET"]
+                )
+            merchant_category = st.selectbox(
+                "Merchant Category", 
+                ["Electronics", "Travel", "Fashion", "Gaming", "Grocery", "Utilities"]
+                )
 
         with col2:
-            ip_risk = st.slider("IP Reputation Risk", 0.0, 1.0, 0.85, help="1.0 means known proxy/botnet IP")
-            device_trust = st.slider("Device Trust Score", 0.0, 1.0, 0.20, help="Low score implies new/emulated device")
-            txn_count_24h = st.number_input("Txn Count (24h)", 0, value=5)
+            ip_risk = st.slider(
+                "IP Reputation Risk", 
+                0.0, 1.0, 0.85, 
+                help="1.0 means known proxy/botnet IP"
+                )
+            device_trust = st.slider(
+                "Device Trust Score", 
+                0.0, 1.0, 0.20, 
+                help="A score based on device fingerprinting. 1.0 is a known, safe device; <0.5 is suspicious."
+                )
+            txn_count_24h = st.number_input(
+                "Txn Count (24h)", 
+                0, 
+                value=5,
+                help="Velocity Check: The number of successful transactions this customer has made in the last 24 hours. Rapid bursts often indicate account takeover."
+                )
 
         with col3:
-            merchant_hist_fraud = st.slider("Merchant Fraud Rate", 0.0, 1.0, 0.15)
-            is_international = st.selectbox("Cross-Border (International)?", [0, 1])
+            merchant_hist_fraud = st.slider(
+                "Merchant Fraud Rate", 
+                0.0, 1.0, 0.15
+                )
+            is_international = st.selectbox(
+                "Cross-Border (International)?", 
+                [0, 1],
+                format_func=lambda x: "Yes" if x == 1 else "No",
+                help="Cross-border transactions carry a higher baseline risk coefficient."
+                )
 
         st.markdown("<br>", unsafe_allow_html=True)
         submitted = st.form_submit_button("⚡ Execute Real-Time Risk Analysis", type="primary", use_container_width=True)
