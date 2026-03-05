@@ -17,6 +17,16 @@ app = FastAPI(
     version="1.0.0",
     description="Real-time fraud scoring API for digital payments."
 )
+
+@app.get("/")
+async def root():
+    """Root endpoint for basic connectivity checks."""
+    return {
+        "project": "PaySphere Fraud Risk Intelligence",
+        "status": "online",
+        "version": "1.0.0"
+    }
+
 @app.on_event("startup")
 async def startup_event():
     logger.info("Risk Engine API is starting up...")

@@ -80,17 +80,15 @@ class APIFraudScorer:
             return [0.0] * len(df_batch) # Fallback to prevent UI crash
         
     def check_api_health(self):
-        """Checks if the FastAPI backend is responding."""
+        """Checks if the FastAPI backend is responding via the /health endpoint."""
         try:
-            # Strip trailing slashes to prevent // in the URL
-            url = f"{self.api_url.rstrip('/')}/"
+            # Explicitly target the /health endpoint
+            url = f"{self.api_url.rstrip('/')}/health"
             response = requests.get(url, timeout=5)
             
-            # 200 means we are live
             return response.status_code == 200
         except Exception as e:
-            # Logging the error
-            print(f"Connection Error: {e}")
+            print(f"Health check failed: {e}")
             return False
 
 # Page Configuration
