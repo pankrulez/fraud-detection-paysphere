@@ -113,6 +113,15 @@ class APIFraudScorer:
         except requests.exceptions.RequestException as e:
             st.error(f"Batch API Error: {e}")
             return [0.0] * len(df_batch) # Fallback to prevent UI crash
+        
+    def check_api_health(self):
+        """Checks if the FastAPI backend is responding."""
+        try:
+            # We hit the root or a dedicated health endpoint
+            response = requests.get(f"{self.api_url}/", timeout=3)
+            return response.status_code == 200
+        except:
+            return False
 
 # =========================
 # LOADERS

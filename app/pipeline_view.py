@@ -98,25 +98,30 @@ def render_pipeline():
     st.markdown("---")
     st.subheader("📦 Production Model Registry")
     
-    # Instead of checking local files, we report the status of the cloud artifact
+    # Get the scorer from session state
+    scorer = st.session_state.get('api_scorer')
+    is_online = scorer.check_api_health() if scorer else False
+    
+    status_color = "#10B981" if is_online else "#EF4444"
+    status_text = "ONLINE" if is_online else "OFFLINE"
+
     st.markdown(f"""
         <div class="registry-container">
-            <div style="display: flex; justify-content: space-between;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <p style="margin:0; color:#64748B; font-size:0.8rem; text-transform: uppercase;">Registry Artifact</p>
                     <p style="margin:0; font-weight:600; color:#F8FAFC;">fraud_pipeline.joblib</p>
                 </div>
                 <div>
-                    <p style="margin:0; color:#64748B; font-size:0.8rem; text-transform: uppercase;">Location</p>
-                    <p style="margin:0; font-weight:600; color:#3B82F6;">Render Cloud API</p>
-                </div>
-                <div>
-                    <p style="margin:0; color:#64748B; font-size:0.8rem; text-transform: uppercase;">Status</p>
-                    <p style="margin:0; font-weight:600; color:#10B981;">Production Active</p>
+                    <p style="margin:0; color:#64748B; font-size:0.8rem; text-transform: uppercase;">Backend Status</p>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="height: 10px; width: 10px; background-color: {status_color}; border-radius: 50%; display: inline-block; box-shadow: 0 0 8px {status_color};"></span>
+                        <p style="margin:0; font-weight:600; color:{status_color};">{status_text}</p>
+                    </div>
                 </div>
                 <div>
                     <p style="margin:0; color:#64748B; font-size:0.8rem; text-transform: uppercase;">Environment</p>
-                    <p style="margin:0; font-weight:600; color:#F59E0B;">Python 3.11</p>
+                    <p style="margin:0; font-weight:600; color:#F59E0B;">Render Cloud (Python 3.11)</p>
                 </div>
             </div>
         </div>
