@@ -14,7 +14,7 @@ from app.live_view import render_live_scoring
 from app.analytics_view import render_analytics
 from app.pipeline_view import render_pipeline
 
-API_URL = os.getenv("API_URL", "http://localhost:8000").rstrip("/")
+API_URL = st.secrets.get("API_URL", "http://localhost:8000")
 
 # =========================
 # API PROXY CLIENT
@@ -82,10 +82,15 @@ class APIFraudScorer:
     def check_api_health(self):
         """Checks if the FastAPI backend is responding."""
         try:
-            # We hit the root or a dedicated health endpoint
-            response = requests.get(f"{self.api_url}/", timeout=3)
+            # Strip trailing slashes to prevent // in the URL
+            url = f"{self.api_url.rstrip('/')}/"
+            response = requests.get(url, timeout=5)
+            
+            # 200 means we are live
             return response.status_code == 200
-        except:
+        except Exception as e:
+            # Logging the error
+            print(f"Connection Error: {e}")
             return False
 
 # Page Configuration
