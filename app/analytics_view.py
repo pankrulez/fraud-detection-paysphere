@@ -1,385 +1,179 @@
-# app/analytics_view.py
 import streamlit as st
 import plotly.express as px
-import plotly.graph_objects as go
-
+import pandas as pd
+import numpy as np
+from datetime import datetime
+from app.ui_components import render_threshold_explanation
 
 def render_analytics(load_sample_data_fn, show_raw: bool, threshold: float, scorer):
+    # 1. STYLING (Card Gradients)
+    st.markdown("""
+        <style>
+        [data-testid="stMetricValue"] { 
+        font-size: 28px; 
+        font-weight: 700; 
+        color: #F8FAFC; 
+        }
+        div[data-testid="column"] {
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+            padding: 20px; 
+            border-radius: 12px; 
+            border: 1px solid #334155;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-    df = load_sample_data_fn()
+    # 2. DATA PREP (Using the API Proxy)
+    if 'scored_df' not in st.session_state:
+        df_raw = load_sample_data_fn()
+        
+        sample_to_score = df_raw.head(25000).copy()
+        
+        # --- SCHEMA ALIGNMENT --- #
+        
+        # 1. Ensure required string/ID fields exist
+        if "customer_id" not in sample_to_score.columns: sample_to_score["customer_id"] = "CUST_X"
+        if "device_id" not in sample_to_score.columns: sample_to_score["device_id"] = "DEV_X"
+        if "merchant_id" not in sample_to_score.columns: sample_to_score["merchant_id"] = "MERCH_X"
+        if "timestamp" not in sample_to_score.columns: sample_to_score["timestamp"] = datetime.utcnow().isoformat()
+        
+        # 2. Ensure required numeric fields exist
+        defaults = {
+            "is_international": 0, "is_weekend": 0, "past_fraud_count_customer": 0,
+            "past_disputes_customer": 0, "txn_count_last_24h": 0, "customer_tenure_days": 0,
+            "location_change_flag": 0, "otp_success_rate_customer": 1.0, 
+            "ip_address_country_match": 1, "hour_of_day": 12, "day_of_week": 3,
+            "merchant_historical_fraud_rate": 0.05, "ip_address_risk_score": 0.1,
+            "device_trust_score": 0.9, "amount": 100.0, "payment_method": "credit_card",
+            "merchant_category": "retail"
+        }
+        for col, default_val in defaults.items():
+            if col not in sample_to_score.columns:
+                sample_to_score[col] = default_val
+
+        # Ensure string types for categories to avoid float/int typing errors
+        sample_to_score['payment_method'] = sample_to_score['payment_method'].astype(str)
+        sample_to_score['merchant_category'] = sample_to_score['merchant_category'].astype(str)
+        sample_to_score['customer_id'] = sample_to_score['customer_id'].astype(str)
+        sample_to_score['device_id'] = sample_to_score['device_id'].astype(str)
+        sample_to_score['merchant_id'] = sample_to_score['merchant_id'].astype(str)
+
+        # ---- API BATCH SCORING ---- #
+
+        with st.spinner("Scoring 25000 transactions via Batch API..."):
+            probabilities = scorer.predict_proba_batch(sample_to_score)
+            
+            sample_to_score['model_probability'] = probabilities
+            st.session_state.scored_df = sample_to_score
+
+    df = st.session_state.scored_df
+    df['predicted_fraud'] = (df['model_probability'] >= threshold).astype(int)
+
+    # 3. GRADIENT CARDS: FINANCIAL SIMULATOR
+    st.title("📊 Fraud Analytics & Business Impact")
+    render_threshold_explanation(threshold)
+    s1, s2, s3 = st.columns(3)
     
-    # ---------------------------------------------------
-    # KPI STRIP (Real Model + Threshold Reactive)
-    # ---------------------------------------------------
-    st.markdown("### 📈 KPI Snapshot (Model-Driven)")
+    saved = df[(df['predicted_fraud'] == 1) & (df['is_fraud'] == 1)]['amount'].sum()
+    loss = df[(df['predicted_fraud'] == 0) & (df['is_fraud'] == 1)]['amount'].sum()
+    friction = df[(df['predicted_fraud'] == 1) & (df['is_fraud'] == 0)]['amount'].sum()
 
-    # Run real model scoring
-    proba = scorer.predict_proba(df)
-
-    # If model returns 2D array, take fraud class probability
-    if len(proba.shape) == 2:
-        df["model_probability"] = proba[:, 1]
-    else:
-        df["model_probability"] = proba
-
-
-    # Debug safe guard
-    if df["model_probability"].max() == 0:
-        st.warning("Model returned zero probabilities for all rows.")
-        return
-
-    df["predicted_fraud"] = (df["model_probability"] >= threshold).astype(int)
-
-    actual_rate = df["is_fraud"].mean()
-    predicted_rate = df["predicted_fraud"].mean()
-
-    flagged_txns = df["predicted_fraud"].sum()
-    actual_fraud_count = df["is_fraud"].sum()
-
-    captured_fraud = df[
-        (df["predicted_fraud"] == 1) & (df["is_fraud"] == 1)
-    ].shape[0]
-
-    false_positives = df[
-        (df["predicted_fraud"] == 1) & (df["is_fraud"] == 0)
-    ].shape[0]
-
-    precision = (
-        captured_fraud / flagged_txns
-        if flagged_txns > 0 else 0
-    )
-
-    recall = (
-        captured_fraud / actual_fraud_count
-        if actual_fraud_count > 0 else 0
-    )
-    suggested_threshold = df["model_probability"].quantile(0.95)
-
-    k1, k2, k3, k4 = st.columns(4)
-
-    k1.metric("Actual Fraud Rate", f"{actual_rate:.2%}")
-    k2.metric("Predicted Fraud Rate", f"{predicted_rate:.2%}")
-    k3.metric("Precision", f"{precision:.2%}")
-    k4.metric("Recall", f"{recall:.2%}")
-    st.caption(f"95th percentile probability: {suggested_threshold:.3f}")
-
-    st.markdown(
-        f"""
-        <div style="font-size:16px; color:#cbd5e1;">
-        Current Decision Threshold: <b>{threshold:.2f}</b><br><br>
-        • Precision reflects false-positive control (customer protection).<br>
-        • Recall reflects fraud capture strength (loss prevention).<br>
-        Adjusting the sidebar threshold directly changes this trade-off.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown("---")
-    
-    # ---------------------------------------------------
-    # CONFUSION MATRIX
-    # ---------------------------------------------------
-    st.markdown("### 🧮 Confusion Matrix")
-
-    tp = df[(df["predicted_fraud"] == 1) & (df["is_fraud"] == 1)].shape[0]
-    tn = df[(df["predicted_fraud"] == 0) & (df["is_fraud"] == 0)].shape[0]
-    fp = df[(df["predicted_fraud"] == 1) & (df["is_fraud"] == 0)].shape[0]
-    fn = df[(df["predicted_fraud"] == 0) & (df["is_fraud"] == 1)].shape[0]
-
-    import numpy as np
-    import plotly.figure_factory as ff
-
-    matrix = np.array([[tn, fp],
-                       [fn, tp]])
-    
-    col1, col2 = st.columns([3, 2])
-    
-    with col1:
-        fig = ff.create_annotated_heatmap(
-            z=matrix,
-            x=["Predicted Genuine", "Predicted Fraud"],
-            y=["Actual Genuine", "Actual Fraud"],
-            colorscale="Blues",
-            showscale=True,
+    s1.metric(
+        "Fraud Prevented", 
+        f"₹{saved:,.0f}", 
+        help="The total value of confirmed fraudulent transactions successfully blocked by the model. This represents direct capital loss prevention."
         )
-
-        fig.update_layout(
-            height=420,
-            title="Model Decision Breakdown",
-            title_font_size=20,
+    s2.metric(
+        "Fraud Missed", 
+        f"₹{loss:,.0f}", 
+        delta_color="inverse",
+        help="The value of fraudulent transactions that the model failed to flag (False Negatives). This is the direct cost of 'leaked' fraud."
         )
-
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.markdown(
-            """
-            <div style="font-size:17px; color:#cbd5e1;">
-            This matrix shows how many transactions fall into each category:
-            <ul>
-                <li><b style="color:#22c55e;">True Negatives (TN):</b> Genuine transactions correctly identified.</li>
-                <li><b style="color:#ef4444;">False Positives (FP):</b> Genuine transactions incorrectly flagged as fraud.</li>
-                <li><b style="color:#ef4444;">False Negatives (FN):</b> Fraudulent transactions missed by the model.</li>
-                <li><b style="color:#22c55e;">True Positives (TP):</b> Fraudulent transactions correctly flagged.</li>
-            </ul>
-            The balance of these categories reflects the model's performance and the chosen threshold.
-            </div>
-            """,
-            unsafe_allow_html=True,
+    s3.metric(
+        "Friction Cost", 
+        f"₹{friction:,.0f}", 
+        delta_color="inverse",
+        help="The revenue at risk from genuine customers whose transactions were flagged as suspicious (False Positives). High friction can lead to customer churn."
         )
 
     st.markdown("---")
 
-    # ---------------------------------------------------
-    # FRAUD HEATMAP MATRIX
-    # ---------------------------------------------------
-    st.markdown("### 🔥 Fraud Heatmap Matrix (Hour × Payment Method)")
+    # Row 1: Category & Amount
+    r1_col1, r1_col2 = st.columns(2)
+    with r1_col1:
+        cat_data = df.groupby('merchant_category')['is_fraud'].mean().reset_index()
+        fig1 = px.bar(
+            cat_data, 
+            x='merchant_category', 
+            y='is_fraud', 
+            title="Fraud Rate by Category", 
+            color='is_fraud', 
+            color_continuous_scale='Viridis'
+            )
+        st.plotly_chart(fig1, use_container_width=True)
+        
+    with r1_col2:
+        fig2 = px.violin(
+            df, 
+            x="is_fraud", 
+            y="amount", 
+            box=True, 
+            color="is_fraud", 
+            color_discrete_sequence=['#3B82F6', '#EF4444'],
+            title="Amount Distribution"
+            )
+        st.plotly_chart(fig2, use_container_width=True)
 
-    pivot = (
-        df.groupby(["hour_of_day", "payment_method"])["is_fraud"]
-        .mean()
-        .reset_index()
-    )
-    col1, col2 = st.columns([3, 2])
+    # Row 2: Method & Risk Correlation
+    r2_col1, r2_col2 = st.columns(2)
+    with r2_col1:
+        method_data = df.groupby('payment_method')['is_fraud'].mean().reset_index()
+        fig3 = px.bar(
+            method_data, 
+            x='payment_method', 
+            y='is_fraud', 
+            title="Fraud Rate by Method", 
+            color='payment_method',
+            color_discrete_sequence=px.colors.qualitative.Pastel
+            )
+        st.plotly_chart(fig3, use_container_width=True)
+        
+    with r2_col2:
+        corrs = df.select_dtypes(include=[np.number]).corr()['is_fraud'].drop('is_fraud', errors='ignore').sort_values()
+        fig4 = px.bar(
+            x=corrs.values, 
+            y=corrs.index, 
+            orientation='h', 
+            title="Risk Signal Strength", 
+            color=corrs.values,
+            color_continuous_scale='RdBu_r'
+            )
+        st.plotly_chart(fig4, use_container_width=True)
+
+    # Row 3: Risk Clustering & Velocity
+    r3_col1, r3_col2 = st.columns(2)
+    with r3_col1:
+        fig5 = px.scatter(
+            df, 
+            x="ip_address_risk_score", 
+            y="device_trust_score", 
+            color="is_fraud", 
+            title="Risk Clustering",
+            color_discrete_sequence=['#3B82F6', '#EF4444'], opacity=0.6
+            )
+        st.plotly_chart(fig5, use_container_width=True)
     
-    with col1:
-
-        heatmap = px.density_heatmap(
-            pivot,
-            x="hour_of_day",
-            y="payment_method",
-            z="is_fraud",
-            color_continuous_scale="RdYlGn_r",
-            height=420,
-            title="Fraud Rate by Hour and Payment Method",
-        )
-
-        heatmap.update_layout(
-            title_font_size=20,
-            xaxis_title="Hour of Day",
-            yaxis_title="Payment Method",
-        )
-
-        st.plotly_chart(heatmap, use_container_width=True)
-
-    with col2:
-        st.markdown(
-            """
-            <div style="font-size:17px; color:#cbd5e1;">
-            This heatmap reveals high-risk combinations of transaction time and payment method.
-            <ul>
-                <li>Red zones indicate higher fraud rates, guiding real-time risk rules.</li>
-                <li>For example, if UPI transactions spike in fraud during late hours, the system can apply stricter controls during those times.</li>
-                <li>This matrix helps translate model insights into operational strategies.</li>
-            </ul>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("---")
-    
-    st.markdown(
-        "<h2 style='font-size:28px;'>📊 Fraud Analytics & Behavioural Patterns</h2>",
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        """
-        <p style='font-size:15px; color:#cbd5e1;'>
-        These charts demonstrate how the fraud model learns patterns from class imbalance,
-        transaction amount behavior, temporal spikes, velocity signals, and device/network risk indicators.
-        Each visualization reflects a feature signal that directly contributes to real-time scoring decisions.
-        </p>
-        """,
-        unsafe_allow_html=True,
-    )
+    with r3_col2:
+        fig6 = px.histogram(
+            df, 
+            x="txn_count_last_24h", 
+            color="is_fraud", 
+            barmode="group", 
+            title="24h Velocity Impact",
+            color_discrete_sequence=['#3B82F6', '#EF4444']
+            )
+        st.plotly_chart(fig6, use_container_width=True)
 
     if show_raw:
-        st.markdown("#### Sample of cleaned transactions")
-        st.dataframe(df.head(50))
-
-    # -----------------------------
-    # 1. Class Distribution
-    # -----------------------------
-    col1, col2 = st.columns([3, 2])
-
-    with col1:
-        fig = px.histogram(
-            df,
-            x="is_fraud",
-            color="is_fraud",
-            color_discrete_sequence=["#22c55e", "#ef4444"],
-            title="Class Imbalance",
-            height=380,
-        )
-        fig.update_layout(
-            title_font_size=20,
-            xaxis_title="Fraud Label (0 = Genuine, 1 = Fraud)",
-            yaxis_title="Transaction Count",
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-    with col2:
-        st.markdown("""
-        <div style="font-size:17px; line-height:1.6;">
-        <b style="color:#ef4444;">Key Insight:</b><br><br>
-        Fraud is extremely rare compared to genuine transactions.
-        This severe imbalance is why techniques like 
-        <span style="color:#ef4444; font-weight:600;">SMOTE</span> are applied.
-        <br><br>
-        The model must detect rare fraud events without overwhelming the system
-        with false positives.
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # -----------------------------
-    # 2. Amount Distribution
-    # -----------------------------
-    col1, col2 = st.columns([3, 2])
-
-    with col1:
-        fig = px.box(
-            df,
-            x="is_fraud",
-            y="amount",
-            color="is_fraud",
-            color_discrete_sequence=["#22c55e", "#ef4444"],
-            title="Transaction Amount by Label",
-            height=400,
-        )
-        fig.update_layout(title_font_size=20)
-        st.plotly_chart(fig, use_container_width=True)
-
-    with col2:
-        st.markdown("""
-        <div style="font-size:17px; line-height:1.6;">
-        <b style="color:#f59e0b;">Behavioral Pattern:</b><br><br>
-        Fraud clusters around specific amount bands.
-        <br><br>
-        Common strategies:
-        <ul>
-            <li>Small test transactions before large attacks</li>
-            <li>High-value rapid withdrawals</li>
-        </ul>
-        Amount is one of the strongest predictive features in fraud modeling.
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # -----------------------------
-    # 3. Fraud Rate by Payment Method
-    # -----------------------------
-    tmp_pm = df.groupby("payment_method")["is_fraud"].mean().reset_index()
-
-    col1, col2 = st.columns([3, 2])
-
-    with col1:
-        fig = px.bar(
-            tmp_pm,
-            x="payment_method",
-            y="is_fraud",
-            color="is_fraud",
-            color_continuous_scale="RdYlGn_r",
-            title="Fraud Rate by Payment Method",
-            height=380,
-        )
-        fig.update_layout(title_font_size=20)
-        st.plotly_chart(fig, use_container_width=True)
-
-    with col2:
-        st.markdown("""
-        <div style="font-size:17px; line-height:1.6;">
-        <b style="color:#3b82f6;">Operational Insight:</b><br><br>
-        Different payment rails have different fraud profiles.
-        <br><br>
-        Cards may have higher chargeback exposure, 
-        while instant rails (UPI / wallets) may see velocity abuse.
-        <br><br>
-        The model captures these structural differences.
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # -----------------------------
-    # 4. Temporal Risk (Hour of Day)
-    # -----------------------------
-    tmp_hour = df.groupby("hour_of_day")["is_fraud"].mean().reset_index()
-
-    col1, col2 = st.columns([3, 2])
-
-    with col1:
-        fig = px.line(
-            tmp_hour,
-            x="hour_of_day",
-            y="is_fraud",
-            markers=True,
-            title="Fraud Rate by Hour of Day",
-            height=380,
-        )
-        fig.update_traces(line=dict(width=3))
-        fig.update_layout(title_font_size=20)
-        st.plotly_chart(fig, use_container_width=True)
-
-    with col2:
-        st.markdown("""
-        <div style="font-size:17px; line-height:1.6;">
-        <b style="color:#ef4444;">Temporal Spike:</b><br><br>
-        Fraud often increases during late-night or low-monitoring hours.
-        <br><br>
-        Organized fraud campaigns exploit reduced oversight windows.
-        <br><br>
-        Time-based features improve model sensitivity to these spikes.
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # -----------------------------
-    # 5. IP Risk vs Device Trust
-    # -----------------------------
-    sample = df.sample(min(2000, len(df)), random_state=42)
-
-    col1, col2 = st.columns([3, 2])
-
-    with col1:
-        fig = px.scatter(
-            sample,
-            x="ip_address_risk_score",
-            y="device_trust_score",
-            color="is_fraud",
-            opacity=0.6,
-            color_discrete_sequence=["#22c55e", "#ef4444"],
-            title="IP Risk vs Device Trust",
-            height=420,
-        )
-        fig.update_layout(title_font_size=20)
-        st.plotly_chart(fig, use_container_width=True)
-
-    with col2:
-        st.markdown("""
-        <div style="font-size:17px; line-height:1.6;">
-        <b style="color:#9333ea;">Network & Device Intelligence:</b><br><br>
-        High IP risk + Low device trust is a strong fraud signal.
-        <br><br>
-        This pattern is typical of:
-        <ul>
-            <li>Bots & emulators</li>
-            <li>Proxy or VPN abuse</li>
-            <li>Account takeover attempts</li>
-        </ul>
-        Combining network and device signals significantly boosts detection power.
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    st.info(
-        "Charts on the left show quantitative patterns. "
-        "Panels on the right explain how each signal contributes to the ML decision layer."
-    )
+        st.dataframe(df[df['predicted_fraud'] == 1], use_container_width=True)

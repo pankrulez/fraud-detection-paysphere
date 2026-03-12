@@ -1,116 +1,137 @@
-# app/pipeline_view.py
+import os
 import streamlit as st
-
+from app.ui_components import info_card
 
 def render_pipeline():
+    # Force a check every time the tab is clicked
+    scorer = st.session_state.get('api_scorer')
+    
+    # show a small spinner to be sure it's running
+    if scorer:
+        is_online = scorer.check_api_health()
+    else:
+        is_online = False
+    
+    # 1. UI STYLING
+    st.markdown("""
+        <style>
+        .pipeline-card {
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .step-number {
+            background: #3B82F6;
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 12px;
+        }
+        .registry-container {
+            background: #111827;
+            border-radius: 12px;
+            border-left: 4px solid #4F46E5;
+            padding: 20px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-    st.markdown("### 🧬 End-to-End Fraud Detection Pipeline")
+    st.title("🛡️ Fraud Detection Pipeline")
+    st.caption("Enterprise-grade ML architecture for high-frequency payment streams.")
 
-    st.markdown(
-        "This page is a slide-free architecture walkthrough of the PaySphere fraud engine, "
-        "from raw payments to real-time actions."
+    st.write(
+        """
+        The PaySphere pipeline transforms raw transaction logs into calibrated risk decisions. 
+        By utilizing a **decoupled microservice architecture**, we separate the inference logic 
+        from the presentation layer to ensure maximum scalability and reliability.
+        """
     )
+    st.markdown("<br>", unsafe_allow_html=True)
 
+    # Content steps for the UI
     steps = [
-        (
-            "1", "Data Ingestion & Validation", "#3b82f6",
-            "Raw transactions from UPI, cards, net banking, and wallets are loaded from "
-            "<code>transactions_fraud.csv</code>. We validate schema, enforce business rules (amount "
-            "positivity, temporal ranges, binary flags), and persist clean data to "
-            "<code>data/interim/transactions_clean.csv</code> for repeatable experiments.",
-            "Is the data reliable enough to take risk decisions on?",
-        ),
-        (
-            "2", "Feature Engineering & Behavioural Signals", "#9333ea",
-            "We transform raw fields into richer signals: customer spend deviation, short- "
-            "and medium-term velocity, device sharing, and historical fraud/dispute ratios. "
-            "A combined risk index aggregates IP reputation, device trust, customer history, "
-            "and merchant risk into a single score for the model.",
-            "What does this transaction look like in the context of the customer, device, and merchant history?",
-        ),
-        (
-            "3", "Imbalance Handling & Model Training", "#ef4444",
-            "Because fraud is extremely rare, we apply SMOTE to balance the training set. "
-            "A tree-based classifier (RandomForest / XGBoost) is trained on the engineered "
-            "features. We track ROC AUC and PR AUC, but emphasise precision and recall at "
-            "a chosen threshold to reflect fraud loss vs customer friction trade-offs.",
-            "How well can the model separate fraud from genuine behaviour under real class imbalance?",
-        ),
-        (
-            "4", "Model Serialization & Artifacts", "#3b82f6",
-            "The trained model and preprocessing stack are versioned and saved using joblib "
-            "<code>models/artifacts/fraud_model.joblib</code>, "
-            "<code>models/encoders/preprocessing.joblib</code>."
-            "The FraudScorer class encapsulates loading, preprocessing, scoring, and mapping "
-            "probabilities to actions, making downstream integration simple.",
-            "Can we reproduce this model later and reliably deploy the same logic?",
-        ),
-        (
-            "5", "Real-Time Scoring & Decisioning", "#f59e0b",
-            "For each incoming transaction, we apply the same feature logic, generate a fraud "
-            "probability, and compare it to the configurable threshold (see sidebar). "
-            "Probability bands are mapped to business actions (HARD_BLOCK, OTP_CHALLENGE, "
-            "SOFT_REVIEW, ALLOW) that plug directly into the payment gateway or analyst queues.",
-            "Given this risk score, what should actually happen to the transaction right now?",
-        ),
-        (
-            "6", "Testing, CI/CD & Streamlit UI", "#22c55e",
-            "pytest tests cover ingestion, feature engineering, training, and inference. "
-            "The repo is CI-ready (GitHub Actions) so tests run on every push. "
-            "The Streamlit app serves both as an internal tooling surface for analysts "
-            "and as a lightweight production UI for early deployments and demos.",
-            "How do we keep this fraud engine reliable as data, code, and models evolve?",
-        ),
+        {
+            "step": 1, "title": "Data Ingestion & Contract", "accent": "#3B82F6",
+            "obj": "Strict schema validation via Pydantic to ensure data integrity.",
+            "meth": ["Implemented FastAPI Request Models", "Validated 20+ feature fields", "Automatic Type Enforcement"],
+            "out": "Validated JSON payload ready for transformation."
+        },
+        {
+            "step": 2, "title": "Behavioral Feature Engineering", "accent": "#10B981",
+            "obj": "Extract high-signal fraud indicators without data leakage.",
+            "meth": ["Time-series expanding windows", "Transaction velocity metrics", "Merchant risk profiles"],
+            "out": "Engineered feature matrix capturing behavioral risk signals."
+        },
+        {
+            "step": 3, "title": "Unified Inference Pipeline", "accent": "#F59E0B",
+            "obj": "Handle scaling, encoding, and modeling in one atomic operation.",
+            "meth": ["StandardScaler normalization", "One-Hot Categorical Encoding", "RandomForest Classification"],
+            "out": "Single joblib artifact optimized for sub-50ms inference."
+        },
+        {
+            "step": 4, "title": "Real-Time Scoring API", "accent": "#EC4899",
+            "obj": "Serve predictions via RESTful endpoints.",
+            "meth": ["Vectorized Batch Scoring", "Single Transaction Latency Tuning", "Cross-Origin Support"],
+            "out": "Live HTTP scoring service running on Render."
+        }
     ]
 
-    # ---- Timeline Rendering ----
-    for step, title, color, body, question in steps:
-
-        container = st.container()
-
-        with container:
-            col1, col2 = st.columns([1, 12])
-
-            # Step circle
-            with col1:
-                st.markdown(
-                    f"""
-                    <div style="
-                        width:45px;
-                        height:45px;
-                        border-radius:50%;
-                        background:{color};
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                        color:white;
-                        font-weight:bold;
-                        box-shadow:0 4px 14px rgba(0,0,0,0.4);
-                    ">
-                        {step}
+    for s in steps:
+        with st.container():
+            st.markdown(f"""
+                <div class="pipeline-card">
+                    <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                        <span class="step-number" style="background-color: {s['accent']};">{s['step']}</span>
+                        <h3 style="margin: 0; color: white;">{s['title']}</h3>
                     </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-            # Card content
-            with col2:
-                st.markdown(
-                    f"""
-                    <div class="glass-card">
-                        <h4 style="margin-top:0; color:{color};">{title}</h4>
-                        <p style="color:#cbd5e1;">{body}</p>
-                        <p style="color:#94a3b8; font-size:0.9rem;">
-                            <b style = "color:{color};">Answers questions like:</b> "{question}"
-                        </p>
+                    <p style="color: #94A3B8; font-size: 0.95rem;"><b>Objective:</b> {s['obj']}</p>
+                    <ul style="color: #CBD5E1; font-size: 0.9rem;">
+                        {"".join([f"<li>{m}</li>" for m in s['meth']])}
+                    </ul>
+                    <div style="background: rgba(16, 185, 129, 0.1); padding: 8px 12px; border-radius: 6px; border-left: 3px solid #10B981;">
+                        <span style="color: #10B981; font-weight: 600; font-size: 0.85rem;">OUTPUT:</span>
+                        <span style="color: #E5E7EB; font-size: 0.85rem;"> {s['out']}</span>
                     </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                </div>
+            """, unsafe_allow_html=True)
 
-        st.markdown("<div style='height:25px'></div>", unsafe_allow_html=True)
+    # 2. ENHANCED MODEL REGISTRY (API BASED)
+    st.markdown("---")
+    st.subheader("📦 Production Model Registry")
+    
+    # Get the scorer from session state
+    scorer = st.session_state.get('api_scorer')
+    is_online = scorer.check_api_health() if scorer else False
+    
+    status_color = "#10B981" if is_online else "#EF4444"
+    status_text = "ONLINE" if is_online else "OFFLINE"
 
-    st.info(
-        "Walk through these steps live while switching to Live Scoring and Analytics "
-        "to show how architecture, ML, and business actions connect."
-    )
+    st.markdown(f"""
+        <div class="registry-container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <p style="margin:0; color:#64748B; font-size:0.8rem; text-transform: uppercase;">Registry Artifact</p>
+                    <p style="margin:0; font-weight:600; color:#F8FAFC;">fraud_pipeline.joblib</p>
+                </div>
+                <div>
+                    <p style="margin:0; color:#64748B; font-size:0.8rem; text-transform: uppercase;">Backend Status</p>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="height: 10px; width: 10px; background-color: {status_color}; border-radius: 50%; display: inline-block; box-shadow: 0 0 8px {status_color};"></span>
+                        <p style="margin:0; font-weight:600; color:{status_color};">{status_text}</p>
+                    </div>
+                </div>
+                <div>
+                    <p style="margin:0; color:#64748B; font-size:0.8rem; text-transform: uppercase;">Environment</p>
+                    <p style="margin:0; font-weight:600; color:#F59E0B;">Render Cloud (Python 3.11)</p>
+                </div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
