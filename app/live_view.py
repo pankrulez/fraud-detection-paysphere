@@ -3,7 +3,7 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
-from app.ui_components import chart_card, info_card
+from app.ui_components import info_card
 from app.ui_components import render_threshold_explanation
 
 def render_live_scoring(scorer, threshold: float):
@@ -72,14 +72,19 @@ def render_live_scoring(scorer, threshold: float):
                 )
 
         st.markdown("<br>", unsafe_allow_html=True)
-        submitted = st.form_submit_button("⚡ Execute Real-Time Risk Analysis", type="primary", use_container_width=True)
+        
+        submitted = st.form_submit_button(
+            "⚡ Execute Real-Time Risk Analysis", 
+            type="primary", 
+            use_container_width=True
+            )
 
     # ==========================================
     # SCORING & OUTPUT
     # ==========================================
     if submitted:
         
-        # 1. The "Wow" Factor: Simulate heavy processing
+        # 1. Simulate heavy processing
         with st.spinner("Intercepting transaction... Routing to FastAPI Risk Engine..."):
             time.sleep(0.5) # Reduced slightly since API call adds real latency
 
@@ -87,7 +92,7 @@ def render_live_scoring(scorer, threshold: float):
 
         # Build Dataframe matching the exact Pydantic schema of our API
         df_input = pd.DataFrame([{
-            "transaction_id": "TXN_999999", # Note: API expects strings for IDs now
+            "transaction_id": "TXN_999999",
             "customer_id": "CUST_10234",
             "device_id": "DEV_5555",
             "merchant_id": "MERCH_111",
@@ -110,18 +115,27 @@ def render_live_scoring(scorer, threshold: float):
             "customer_tenure_days": 365
         }])
 
-        # [FIX] Unpack all three values from the new API Proxy method
+        # Unpack values from the API Proxy
         label, action, prob = scorer.predict_label_and_action(df_input)
 
         st.markdown("---")
 
         # 2. Dynamic Alert Banners
         if action == "HARD_BLOCK":
-            st.error(f"🚨 **HIGH RISK DETECTED: {action}** | Fraud Probability: {prob:.2%}", icon="🚨")
+            st.error(
+                f"🚨 **HIGH RISK DETECTED: {action}** | Fraud Probability: {prob:.2%}", 
+                icon="🚨"
+                )
         elif action in ["MANUAL_REVIEW", "OTP_VERIFICATION"]:
-            st.warning(f"⚠️ **ELEVATED RISK: {action}** | Fraud Probability: {prob:.2%}", icon="⚠️")
+            st.warning(
+                f"⚠️ **ELEVATED RISK: {action}** | Fraud Probability: {prob:.2%}", 
+                icon="⚠️"
+                )
         else:
-            st.success(f"✅ **TRANSACTION APPROVED: {action}** | Fraud Probability: {prob:.2%}", icon="✅")
+            st.success(
+                f"✅ **TRANSACTION APPROVED: {action}** | Fraud Probability: {prob:.2%}", 
+                icon="✅"
+                )
 
         # 3. Visual Outcome Layout
         colA, colB = st.columns([1, 1.5])
@@ -147,12 +161,28 @@ def render_live_scoring(scorer, threshold: float):
             fig_gauge = go.Figure(go.Indicator(
                 mode="gauge+number+delta",
                 value=prob * 100,
-                domain={'x': [0, 1], 'y': [0, 1]},
-                title={'text': "Fraud Risk Score", 'font': {'size': 24}},
-                delta={'reference': threshold * 100, 'increasing': {'color': "red"}, 'decreasing': {'color': "green"}},
+                domain={
+                    'x': [0, 1], 
+                    'y': [0, 1]
+                    },
+                title={
+                    'text': "Fraud Risk Score", 
+                    'font': {'size': 24}
+                    },
+                delta={
+                    'reference': threshold * 100, 
+                    'increasing': {'color': "red"}, 
+                    'decreasing': {'color': "green"}
+                    },
                 gauge={
-                    'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "white"},
-                    'bar': {'color': "#ef4444" if label == 1 else "#10b981"},
+                    'axis': {
+                        'range': [0, 100], 
+                        'tickwidth': 1, 
+                        'tickcolor': "white"
+                        },
+                    'bar': {
+                        'color': "#ef4444" if label == 1 else "#10b981"
+                        },
                     'bgcolor': "rgba(0,0,0,0)",
                     'borderwidth': 2,
                     'bordercolor': "gray",
@@ -167,7 +197,12 @@ def render_live_scoring(scorer, threshold: float):
                     }
                 }
             ))
-            fig_gauge.update_layout(height=280, margin=dict(l=20, r=20, t=50, b=20), paper_bgcolor="rgba(0,0,0,0)", font={'color': "white"})
+            fig_gauge.update_layout(
+                height=280, 
+                margin=dict(l=20, r=20, t=50, b=20), 
+                paper_bgcolor="rgba(0,0,0,0)", 
+                font={'color': "white"}
+                )
             st.plotly_chart(fig_gauge, use_container_width=True)
 
         # 4. Explainable AI (Data-Driven Marginal Contribution via Proxy)
@@ -209,7 +244,8 @@ def render_live_scoring(scorer, threshold: float):
         measures = ["absolute"] + ["relative"] * len(top_drivers) + ["relative", "total"]
         
         fig_waterfall = go.Figure(go.Waterfall(
-            name="Risk Drivers", orientation="h",
+            name="Risk Drivers", 
+            orientation="h",
             measure=measures,
             y=y_labels,
             x=x_values,

@@ -63,7 +63,7 @@ def chart_card(title, description, fig, accent="primary", height=DEFAULT_CHART_H
             plot_bgcolor="rgba(0,0,0,0)"
         )
         
-        # NATIVE PLOTLY RENDER: This guarantees full interactivity, hover templates, and responsiveness
+        # NATIVE PLOTLY RENDER
         st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 

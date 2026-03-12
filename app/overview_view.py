@@ -104,27 +104,48 @@ def render_overview(load_sample_data_fn, scorer):
         ))
 
         fig_dist.update_layout(
-            barmode='stack', height=250, margin=dict(t=30, b=0, l=0, r=0),
-            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            barmode='stack', 
+            height=250, 
+            margin=dict(t=30, b=0, l=0, r=0),
+            plot_bgcolor="rgba(0,0,0,0)", 
+            paper_bgcolor="rgba(0,0,0,0)",
             xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
             yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
         )
-        st.plotly_chart(fig_dist, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(
+            fig_dist, 
+            use_container_width=True, 
+            config={"displayModeBar": False}
+            )
         st.caption("Fraud represents a very small fraction of total volume — highlighting severe class imbalance (<0.5% typical in production).")
 
     with col2:
         st.subheader("Fraud Rate by Payment Rail")
 
         fraud_by_pm = df.groupby("payment_method")["is_fraud"].mean().reset_index().sort_values(by="is_fraud", ascending=False)
-        fig2 = px.bar(fraud_by_pm, x="payment_method", y="is_fraud", color="is_fraud", color_continuous_scale="Reds")
+        fig2 = px.bar(
+            fraud_by_pm, 
+            x="payment_method", 
+            y="is_fraud", 
+            color="is_fraud", 
+            color_continuous_scale="Reds"
+            )
         
         fig2.update_layout(
-            height=250, margin=dict(t=30, b=0, l=0, r=0),
-            xaxis_title="", yaxis_title="Fraud Rate", coloraxis_showscale=False,
-            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)"
+            height=250, 
+            margin=dict(t=30, b=0, l=0, r=0),
+            xaxis_title="", 
+            yaxis_title="Fraud Rate", 
+            coloraxis_showscale=False,
+            plot_bgcolor="rgba(0,0,0,0)", 
+            paper_bgcolor="rgba(0,0,0,0)"
         )
         fig2.update_yaxes(tickformat=',.1%')
-        st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(
+            fig2, 
+            use_container_width=True, 
+            config={"displayModeBar": False}
+            )
         st.caption("Different payment rails exhibit structurally different risk patterns.")
 
     st.markdown("---")
@@ -138,22 +159,29 @@ def render_overview(load_sample_data_fn, scorer):
     plot_df["Label"] = plot_df["is_fraud"].map({0: "Genuine", 1: "Fraud"})
     
     fig_box = px.box(
-        plot_df, x="Label", y="amount", color="Label",
+        plot_df, x="Label", 
+        y="amount", 
+        color="Label",
         color_discrete_map={"Genuine": "#10b981", "Fraud": "#ef4444"},
         points="outliers"
     )
     
     fig_box.update_layout(
-        yaxis_type="log", # CRITICAL: Log scale reveals the extremes without squashing the middle
-        yaxis_title="Transaction Amount (₹) - Log Scale", xaxis_title="",
-        margin=dict(t=10, b=10, l=10, r=10), showlegend=False,
-        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)"
+        yaxis_type="log", # Log scale reveals the extremes without squashing the middle
+        yaxis_title="Transaction Amount (₹) - Log Scale", 
+        xaxis_title="",
+        margin=dict(t=10, b=10, l=10, r=10), 
+        showlegend=False,
+        plot_bgcolor="rgba(0,0,0,0)", 
+        paper_bgcolor="rgba(0,0,0,0)"
     )
     
     chart_card(
         "Transaction Value Distributions (Log-Scaled)", 
         "Notice how fraudulent transactions cluster around different extremes compared to genuine behavior.", 
-        fig_box, accent="info", height=350
+        fig_box, 
+        accent="info", 
+        height=350
     )
 
     st.markdown("---")
@@ -166,15 +194,27 @@ def render_overview(load_sample_data_fn, scorer):
     col3, col4 = st.columns(2)
 
     with col3:
-        high_risk_hours = df.groupby("hour_of_day")["is_fraud"].mean().reset_index().sort_values(by="is_fraud", ascending=False).head(5)
+        high_risk_hours = df.groupby("hour_of_day")["is_fraud"].mean().reset_index().sort_values(
+            by="is_fraud", 
+            ascending=False
+            ).head(5)
         st.markdown("**Top 5 High-Risk Hours**")
-        styled_hours = high_risk_hours.style.background_gradient(cmap="Reds", subset=["is_fraud"]).format({"is_fraud": "{:.2%}"})
+        styled_hours = high_risk_hours.style.background_gradient(
+            cmap="Reds", 
+            subset=["is_fraud"]
+            ).format({"is_fraud": "{:.2%}"})
         st.dataframe(styled_hours, use_container_width=True, hide_index=True)
 
     with col4:
-        high_risk_merchants = df.groupby("merchant_category")["is_fraud"].mean().reset_index().sort_values(by="is_fraud", ascending=False).head(5)
+        high_risk_merchants = df.groupby("merchant_category")["is_fraud"].mean().reset_index().sort_values(
+            by="is_fraud", 
+            ascending=False
+            ).head(5)
         st.markdown("**Top 5 High-Risk Merchant Categories**")
-        styled_merchants = high_risk_merchants.style.background_gradient(cmap="Reds", subset=["is_fraud"]).format({"is_fraud": "{:.2%}"})
+        styled_merchants = high_risk_merchants.style.background_gradient(
+            cmap="Reds", 
+            subset=["is_fraud"]
+            ).format({"is_fraud": "{:.2%}"})
         st.dataframe(styled_merchants, use_container_width=True, hide_index=True)
 
     st.markdown("---")

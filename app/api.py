@@ -9,7 +9,7 @@ from src.modeling.inference import FraudScorer
 from src.logger import get_logger, setup_logging
 
 setup_logging(default_path="config/logging.yaml")
-# logger = get_logger(__name__)
+
 logger = get_logger("fraud")
 
 app = FastAPI(
@@ -128,6 +128,7 @@ async def get_fraud_score(txn: TransactionRequest):
     except Exception as e:
         logger.error(f"Error processing transaction: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal ML processing error.")
+    
     
 @app.post("/v1/batch-score")
 async def get_batch_score(txns: List[TransactionRequest]):

@@ -35,7 +35,8 @@ class APIFraudScorer:
             
             # 2. Ping the FastAPI endpoint
             response = requests.post(f"{self.api_url}/v1/score", json=payload, timeout=5)
-            response.raise_for_status() # Raise error for bad HTTP status codes
+            # Raise error for bad HTTP status codes
+            response.raise_for_status() 
             
             data = response.json()
             prob = data["fraud_probability"]
@@ -59,8 +60,7 @@ class APIFraudScorer:
             
     def predict_proba(self, df_txn: pd.DataFrame):
         """Fallback for batch scoring in the analytics view."""
-        # For true enterprise analytics, this should hit a batch API endpoint.
-        # For now, we mock the return to prevent the view from breaking.
+        
         _, _, prob = self.predict_label_and_action(df_txn)
         return prob
     
@@ -200,7 +200,11 @@ with st.sidebar:
     st.caption("RISK CONTROLS")
     threshold = st.slider(
         "Decision Threshold",
-        min_value=0.001, max_value=0.5, value=0.083, step=0.001, format="%.3f",
+        min_value=0.001, 
+        max_value=0.5, 
+        value=0.083, 
+        step=0.001, 
+        format="%.3f",
         help="Lower threshold = Higher Recall (Catches more fraud, more false alarms). Higher threshold = Higher Precision (Fewer false alarms)."
     )
 
@@ -213,10 +217,10 @@ with st.sidebar:
 
     show_raw = st.checkbox("Show Raw Data in Analytics", False)
 
-# =========================
-# MAIN CONTENT ROUTING
-# =========================
-# Initialize our new API proxy instead of the heavy local model
+# ==========
+# ROUTING
+# ==========
+# Initialize API proxy
 scorer = APIFraudScorer(api_url=API_URL, threshold=threshold)
 
 if st.session_state.section == "Overview":
