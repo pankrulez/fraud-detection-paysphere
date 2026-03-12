@@ -61,7 +61,7 @@ def render_analytics(load_sample_data_fn, show_raw: bool, threshold: float, scor
 
         # ---- API BATCH SCORING ---- #
 
-        with st.spinner("Scoring 500 transactions instantly via Batch API..."):
+        with st.spinner("Scoring 25000 transactions via Batch API..."):
             probabilities = scorer.predict_proba_batch(sample_to_score)
             
             sample_to_score['model_probability'] = probabilities
