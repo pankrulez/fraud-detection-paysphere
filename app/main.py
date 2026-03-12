@@ -71,7 +71,11 @@ class APIFraudScorer:
             payload = df_batch.fillna(0).to_dict(orient="records")
             
             # Make ONE request with a slightly longer timeout for the batch computation
-            response = requests.post(f"{self.api_url}/v1/batch-score", json=payload, timeout=15)
+            response = requests.post(
+                f"{self.api_url}/v1/batch-score", 
+                json=payload, 
+                timeout=120
+                )
             response.raise_for_status()
             
             return response.json()["probabilities"]
