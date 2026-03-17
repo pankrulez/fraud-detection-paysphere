@@ -17,6 +17,16 @@ from app.batch_view import render_batch_processing
 
 API_URL = st.secrets.get("API_URL", "http://localhost:8000")
 
+def check_api_health(self):
+    try:
+        # Increase timeout for the health check specifically to 10s 
+        # to allow Render to wake up from its sleep state.
+        url = f"{self.api_url.rstrip('/')}/health"
+        response = requests.get(url, timeout=10) 
+        return response.status_code == 200
+    except:
+        return False
+
 # =========================
 # API PROXY CLIENT
 # =========================
