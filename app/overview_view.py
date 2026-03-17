@@ -160,14 +160,17 @@ def render_overview(load_sample_data_fn, scorer):
 
     # 6. BUSINESS INTERPRETATION FOOTER
     st.write("---")
+    
+    directives_html = f"""
+        <p style='font-size: 0.9rem; color: #CBD5E1; line-height: 1.6; margin: 0;'>
+        1. <b>Baseline Integrity:</b> The current fraud rate of {fraud_rate:.2%} is within the established 1% production threshold.<br>
+        2. <b>High Value Alert:</b> Travel and Electronics remain primary targets for high-ticket fraud (Avg ₹{df[df['merchant_category']=='Travel']['amount'].mean():,.0f}).<br>
+        3. <b>System Suggestion:</b> Current Model Confidence is high ({avg_confidence*100}%); consider narrowing the 'Manual Review' band to increase automated throughput.
+        </p>
+    """
+
     info_card(
         "Operational Directives",
-        f"""
-        <p style='font-size: 0.9rem; color: #CBD5E1;'>
-        1. <b>Baseline Integrity:</b> The current fraud rate of {fraud_rate:.2%} is within the established 1% threshold.<br>
-        2. <b>High Value Alert:</b> Travel and Electronics remain the primary targets for high-ticket fraud (Avg ₹{df[df['merchant_category']=='Travel']['amount'].mean():,.0f}).<br>
-        3. <b>System Suggestion:</b> Current Model Confidence is high; consider narrowing the 'Manual Review' band to increase throughput.
-        </p>
-        """,
+        directives_html,
         accent="primary"
     )
