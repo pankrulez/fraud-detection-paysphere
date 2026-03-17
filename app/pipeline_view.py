@@ -135,3 +135,33 @@ def render_pipeline():
             </div>
         </div>
     """, unsafe_allow_html=True)
+    
+    # 3. OBSERVABILITY & GOVERNANCE
+    st.markdown("---")
+    st.subheader("🛡️ Model Governance & Audit")
+    
+    g1, g2 = st.columns(2)
+    with g1:
+        info_card(
+            "Feature Drift Monitoring",
+            """
+            <ul style='font-size: 0.9rem;'>
+                <li><b>Baseline:</b> Training Distribution (Transactions Jan-Mar)</li>
+                <li><b>Current Status:</b> No significant drift detected (PSI < 0.1)</li>
+                <li><b>Alerting:</b> Automated PagerDuty triggers on Precision-Recall degradation.</li>
+            </ul>
+            """,
+            accent="info"
+        )
+    with g2:
+        info_card(
+            "Production Traceability",
+            """
+            <ul style='font-size: 0.9rem;'>
+                <li><b>Trace IDs:</b> Every API request generates a UUID for audit.</li>
+                <li><b>Logging:</b> Structured YAML logging (logs/fraud.log) captures latency and score distributions.</li>
+                <li><b>Version:</b> 1.0.0-stable</li>
+            </ul>
+            """,
+            accent="governance"
+        )

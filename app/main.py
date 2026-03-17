@@ -13,6 +13,7 @@ from app.overview_view import render_overview
 from app.live_view import render_live_scoring
 from app.analytics_view import render_analytics
 from app.pipeline_view import render_pipeline
+from app.batch_view import render_batch_processing
 
 API_URL = st.secrets.get("API_URL", "http://localhost:8000")
 
@@ -196,6 +197,7 @@ with st.sidebar:
     st.caption("NAVIGATION")
     nav_button("Overview", "📋", "nav_overview")
     nav_button("Live Scoring", "⚡", "nav_live")
+    nav_button("Batch Processing", "📂", "nav_batch")
     nav_button("Analytics", "📊", "nav_analytics")
     nav_button("Pipeline", "⚙️", "nav_pipeline")
 
@@ -231,6 +233,8 @@ if st.session_state.section == "Overview":
     render_overview(load_sample_data, scorer)
 elif st.session_state.section == "Live Scoring":
     render_live_scoring(scorer, threshold)
+elif st.session_state.section == "Batch Processing":
+    render_batch_processing(scorer)
 elif st.session_state.section == "Analytics":
     render_analytics(load_sample_data, show_raw, threshold, scorer)
 elif st.session_state.section == "Pipeline":
