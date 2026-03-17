@@ -59,25 +59,27 @@ class FraudScorer:
             raise
     
 
-    def predict_label_and_action(self, df_txn: pd.DataFrame) -> Tuple[int, str, float]:
+    def predict_label_and_action(self, df: pd.DataFrame, threshold=0.5) -> Tuple[int, str, float]:
         """
         Returns the binary label, the business action, and the raw probability.
         """
-        p = self.predict_proba(df_txn)
-        label = int(p >= self.threshold)
+        prob = self.predict_proba(df)
+        # p = self.predict_proba(df_txn)
+        # Apply dynamic logic based on the threshold from the UI
+        label = 1 if prob >= threshold else 0
 
         # Multi-Tiered Relative Policy based on risk severity
         # Cap the extreme risk multiplier at 0.85 to prevent impossible thresholds
-        if p >= min(self.threshold * 5, 0.85):
+        if prob >= min(self.threshold * 5, 0.90):
             action = "HARD_BLOCK"  # Extreme risk
-        elif p >= (self.threshold * 3):
+        elif prob >= (self.threshold * 2):
             action = "MANUAL_REVIEW" # High risk relative to baseline
-        elif p >= self.threshold:
+        elif prob >= self.threshold:
             action = "OTP_VERIFICATION" # Step-up authentication
         else:
             action = "ALLOW" # Safe transaction
             
-        txn_id = df_txn['transaction_id'].iloc[0] if 'transaction_id' in df_txn.columns else "N/A"
-        logger.info(f"Scoring TXN: {txn_id} | Prob: {p:.4f} | Action: {action}")
+        txn_id = df['transaction_id'].iloc[0] if 'transaction_id' in df.columns else "N/A"
+        logger.info(f"Scoring TXN: {txn_id} | Prob: {prob:.4f} | Action: {action}")
             
-        return label, action, p
+        return label, action, prob

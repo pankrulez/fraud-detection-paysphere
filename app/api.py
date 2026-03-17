@@ -61,6 +61,8 @@ class TransactionRequest(BaseModel):
     is_international: int = Field(0, description="1 if cross-border, 0 otherwise")
     is_weekend: int = Field(0, description="1 if weekend, 0 otherwise")
     
+    threshold: float = Field(0.5, ge=0.0, le=1.0, description="Custom decision threshold from UI")
+    
     # Contextual fields
     past_fraud_count_customer: int = Field(0)
     past_disputes_customer: int = Field(0)
@@ -110,7 +112,7 @@ async def get_fraud_score(txn: TransactionRequest):
         df_txn = pd.DataFrame([txn.model_dump()])
         
         # 2. Get label, action, and probability in a SINGLE inference call
-        label, action, prob = scorer.predict_label_and_action(df_txn)
+        label, action, prob = scorer.predict_label_and_action(df_txn, threshold=txn.threshold)
         
         # 3. Generate a unique trace ID for logging/auditing
         trace_id = f"TXN_{uuid.uuid4().hex[:8].upper()}"

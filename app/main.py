@@ -43,6 +43,7 @@ class APIFraudScorer:
         try:
             # 1. Convert the dataframe row to a JSON payload
             payload = df_txn.iloc[0].fillna(0).to_dict()
+            payload["threshold"] = self.threshold
             
             # 2. Ping the FastAPI endpoint
             response = requests.post(f"{self.api_url}/v1/score", json=payload, timeout=5)
