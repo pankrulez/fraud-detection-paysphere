@@ -84,14 +84,37 @@ def render_batch_processing(scorer):
                 st.error(f"Batch Processing Error: {str(e)}")
 
 def align_batch_schema(df):
-    """Fills missing fields with defaults to satisfy the API Pydantic contract."""
+    # Ensure every single field from api.py's TransactionRequest is here
     defaults = {
-        "customer_id": "C_BATCH", "device_id": "D_BATCH", "merchant_id": "M_BATCH",
-        "timestamp": datetime.utcnow().isoformat(), "is_international": 0,
-        "is_weekend": 0, "txn_count_last_24h": 1, "hour_of_day": 12, "day_of_week": 0,
-        "merchant_historical_fraud_rate": 0.05
+        "customer_id": "C_BATCH", 
+        "device_id": "D_BATCH", 
+        "merchant_id": "M_BATCH",
+        "timestamp": datetime.utcnow().isoformat(), 
+        "amount": 100.0,
+        "payment_method": "upi",
+        "merchant_category": "retail",
+        "ip_address_risk_score": 0.05,
+        "device_trust_score": 0.95,
+        "is_international": 0,
+        "is_weekend": 0, 
+        "past_fraud_count_customer": 0,
+        "past_disputes_customer": 0,
+        "txn_count_last_24h": 1, 
+        "customer_tenure_days": 365,
+        "location_change_flag": 0,
+        "otp_success_rate_customer": 1.0,
+        "ip_address_country_match": 1,
+        "hour_of_day": 12, 
+        "day_of_week": 0, # <--- CRITICAL: Match api.py
+        "merchant_historical_fraud_rate": 0.01 # <--- CRITICAL: Match api.py
     }
     for col, val in defaults.items():
         if col not in df.columns:
             df[col] = val
+            
+    # CRITICAL: FastAPI is strict about types. 
+    # Ensure numeric columns are actually floats/ints, not objects
+    df['amount'] = df['amount'].astype(float)
+    df['ip_address_risk_score'] = df['ip_address_risk_score'].astype(float)
+    
     return df
