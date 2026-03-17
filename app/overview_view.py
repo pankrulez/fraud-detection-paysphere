@@ -92,21 +92,30 @@ def render_overview(load_sample_data_fn, scorer):
 
     with col_right:
         # STRATEGIC RISK CONCENTRATION (Treemap)
-        # This shows where the high-value fraud is hiding
+        # Using 'YlOrRd' for better visibility on dark themes
         fig_tree = px.treemap(
-            df[df['is_fraud']==1], 
+            df[df['is_fraud'] == 1], 
             path=['merchant_category', 'payment_method'], 
             values='amount',
             color='amount',
-            color_continuous_scale='Reds',
+            color_continuous_scale='YlOrRd', # Yellow -> Orange -> Red
             title="Fraud Value Distribution by Category & Rail"
         )
+        
         fig_tree.update_layout(
             margin=dict(t=30, b=0, l=0, r=0),
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
-            font={'color': '#F8FAFC'}
+            font={'color': '#F8FAFC', 'size': 14} # Increased font size for labels
         )
+        
+        # Improve label visibility: force white text on dark tiles
+        fig_tree.update_traces(
+            textinfo="label+value",
+            hovertemplate='<b>%{label}</b><br>Total Fraud: ₹%{value:,.0f}',
+            marker=dict(line=dict(width=1, color='#1E293B')) # Add subtle borders to tiles
+        )
+        
         st.plotly_chart(fig_tree, use_container_width=True)
 
     st.write("---")
