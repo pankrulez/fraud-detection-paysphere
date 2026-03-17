@@ -3,6 +3,7 @@ import sys
 import pandas as pd
 import streamlit as st
 import requests
+from datetime import datetime
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
@@ -76,24 +77,72 @@ class APIFraudScorer:
         _, _, prob = self.predict_label_and_action(df_txn)
         return prob
     
-    def predict_proba_batch(self, df_batch: pd.DataFrame):
-        """Sends a dataframe as a single JSON array to the batch endpoint."""
+    def predict_proba_batch(self, df_batch: pd.DataFrame, chunk_size: int = 5000):
+        all_probs = []
+        
+        # 1. Define the absolute minimum required fields based on your api.py Pydantic model
+        required_keys = {
+            "customer_id": "C_BATCH", 
+            "device_id": "D_BATCH", 
+            "merchant_id": "M_BATCH",
+            "timestamp": datetime.utcnow().isoformat(), 
+            "amount": 100.0,
+            "payment_method": "upi", 
+            "merchant_category": "retail",
+            "ip_address_risk_score": 0.0, 
+            "device_trust_score": 1.0,
+            "is_international": 0, 
+            "is_weekend": 0, 
+            "past_fraud_count_customer": 0,
+            "past_disputes_customer": 0, 
+            "txn_count_last_24h": 1, 
+            "customer_tenure_days": 365, 
+            "location_change_flag": 0,
+            "otp_success_rate_customer": 1.0, 
+            "ip_address_country_match": 1,
+            "hour_of_day": 12, 
+            "day_of_week": 0, 
+            "merchant_historical_fraud_rate": 0.0,
+            "threshold": float(self.threshold)
+        }
+
+        # 2. Robust conversion
+        records = []
+        for _, row in df_batch.iterrows():
+            record = row.to_dict()
+            # Merge row data into defaults (row data takes priority)
+            sanitized_record = {**required_keys, **record}
+            
+            # Force correct types for Pydantic
+            sanitized_record["amount"] = float(sanitized_record["amount"])
+            sanitized_record["threshold"] = float(self.threshold)
+            sanitized_record["hour_of_day"] = int(sanitized_record["hour_of_day"])
+            sanitized_record["day_of_week"] = int(sanitized_record.get("day_of_week", 0))
+            
+            records.append(sanitized_record)
+
+        # 3. Chunked Transmission
+        chunks = [records[i:i + chunk_size] for i in range(0, len(records), chunk_size)]
+        
         try:
-            # Convert dataframe to a list of dictionaries
-            payload = df_batch.fillna(0).to_dict(orient="records")
-            
-            # Make ONE request with a slightly longer timeout for the batch computation
-            response = requests.post(
-                f"{self.api_url}/v1/batch-score", 
-                json=payload, 
-                timeout=120
+            for chunk in chunks:
+                response = requests.post(
+                    f"{self.api_url}/v1/batch-score", 
+                    json=chunk, 
+                    timeout=120
                 )
-            response.raise_for_status()
+                if response.status_code == 422:
+                    # This will print the exact field causing the error in your Streamlit UI
+                    st.error(f"Validation Error Detail: {response.json()}")
+                    return [0.0] * len(df_batch)
+                
+                response.raise_for_status()
+                all_probs.extend(response.json()["probabilities"])
             
-            return response.json()["probabilities"]
-        except requests.exceptions.RequestException as e:
-            st.error(f"Batch API Error: {e}")
-            return [0.0] * len(df_batch) # Fallback to prevent UI crash
+            return all_probs
+        except Exception as e:
+            st.error(f"Batch Error: {str(e)}")
+            return [0.0] * len(df_batch)
         
     def check_api_health(self):
         """Checks if the FastAPI backend is responding via the /health endpoint."""
