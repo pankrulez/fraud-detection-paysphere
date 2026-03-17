@@ -80,8 +80,9 @@ class APIFraudScorer:
     def predict_proba_batch(self, df_batch: pd.DataFrame, chunk_size: int = 5000):
         all_probs = []
         
-        # 1. Define the REQUIRED keys to match your Pydantic model exactly
-        required_keys = [
+        # 1. Define the EXACT fields expected by your TransactionRequest in api.py
+        # Any field NOT in this list will be stripped out before sending to the API.
+        api_expected_fields = [
             "customer_id", 
             "device_id", 
             "merchant_id", 
@@ -102,38 +103,43 @@ class APIFraudScorer:
             "day_of_week", 
             "is_weekend", 
             "customer_tenure_days", 
-            "ip_address_country_match"
+            "ip_address_country_match",
+            "threshold" 
         ]
 
-        # 2. Sanitize and Inject Threshold
+        # 2. Sanitize the records
         records = []
-        # Fill NaNs to prevent JSON null errors
-        df_clean = df_batch.fillna(0)
+        df_clean = df_batch.fillna(0) # Handle any NaNs
         
         for _, row in df_clean.iterrows():
-            # Build the record dictionary
-            record = row.to_dict()
+            # Convert row to dict
+            raw_record = row.to_dict()
             
-            # Add the UI-selected threshold (CRITICAL)
-            record["threshold"] = float(self.threshold)
+            # Inject the current threshold from the slider
+            raw_record["threshold"] = float(self.threshold)
             
-            # Ensure correct types to satisfy Pydantic
-            record["customer_id"] = str(record.get("customer_id", "C_BATCH"))
-            record["device_id"] = str(record.get("device_id", "D_BATCH"))
-            record["merchant_id"] = str(record.get("merchant_id", "M_BATCH"))
+            # Strict Type Casting & Sanitization
+            sanitized = {}
+            for field in api_expected_fields:
+                val = raw_record.get(field)
+                
+                # Special handling for ID fields (CSV has them as int, API wants str)
+                if field in ["customer_id", "device_id", "merchant_id"]:
+                    sanitized[field] = str(val)
+                # Ensure float fields are floats
+                elif field in ["amount", "ip_address_risk_score", "device_trust_score", 
+                            "otp_success_rate_customer", "merchant_historical_fraud_rate", "threshold"]:
+                    sanitized[field] = float(val) if val is not None else 0.0
+                # Ensure int fields are ints
+                elif field in ["is_international", "is_weekend", "txn_count_last_24h", 
+                            "hour_of_day", "day_of_week", "location_change_flag"]:
+                    sanitized[field] = int(val) if val is not None else 0
+                else:
+                    sanitized[field] = val
             
-            # Clamp values to prevent "Out of Bounds" errors (e.g., risk score must be 0-1)
-            record["ip_address_risk_score"] = max(0.0, min(1.0, float(record.get("ip_address_risk_score", 0.0))))
-            record["device_trust_score"] = max(0.0, min(1.0, float(record.get("device_trust_score", 1.0))))
-            record["amount"] = max(0.01, float(record.get("amount", 1.0))) # Amount must be > 0
-            
-            # Only keep keys that exist in the TransactionRequest model
-            sanitized_record = {k: record[k] for k in required_keys if k in record}
-            sanitized_record["threshold"] = record["threshold"]
-            
-            records.append(sanitized_record)
+            records.append(sanitized)
 
-        # 3. Send in Chunks
+        # 3. Chunked Transmission
         chunks = [records[i:i + chunk_size] for i in range(0, len(records), chunk_size)]
         
         try:
@@ -143,18 +149,21 @@ class APIFraudScorer:
                     json=chunk, 
                     timeout=120
                 )
+                
                 if response.status_code == 422:
-                    # This will print the EXACT reason Render is rejecting the data
-                    st.error(f"❌ API Rejected Data: {response.json()}")
-                    return [0.0] * len(df_batch)
+                    # BREAK THE LOOP: If the first chunk fails, don't keep trying.
+                    error_detail = response.json()
+                    st.error(f"❌ API Validation Error: {error_detail}")
+                    st.stop() # Stops Streamlit execution here
                 
                 response.raise_for_status()
                 all_probs.extend(response.json()["probabilities"])
-            
+                
             return all_probs
+            
         except Exception as e:
-            st.error(f"⚠️ Batch Scoring Failed: {str(e)}")
-            return [0.0] * len(df_batch)
+            st.error(f"⚠️ Batch Processing Stopped: {str(e)}")
+            st.stop()
         
     def check_api_health(self):
         """Checks if the FastAPI backend is responding via the /health endpoint."""
@@ -189,22 +198,40 @@ st.markdown("""
     --accent: #4C8BF5;
     --accent-soft: #1e3a8a;
 }
-.stApp { background: #0f1115; color: #e5e7eb; }
-section[data-testid="stSidebar"] { background: #151821; padding-top: 1.5rem; }
+.stApp { 
+    background: #0f1115; 
+    color: #e5e7eb; 
+}
+section[data-testid="stSidebar"] { 
+    background: #151821; 
+    padding-top: 1.5rem; 
+}
 div[data-testid="stButton"] > button {
-    background-color: transparent; color: #cbd5e1;
-    border: 1px solid transparent; border-radius: 8px;
-    height: 42px; text-align: left; font-weight: 500;
-    transition: all 0.2s ease-in-out; width: 100%;
+    background-color: transparent; 
+    color: #cbd5e1;
+    border: 1px solid transparent; 
+    border-radius: 8px;
+    height: 42px; 
+    text-align: left; 
+    font-weight: 500;
+    transition: all 0.2s ease-in-out; 
+    width: 100%;
 }
 div[data-testid="stButton"] > button:hover {
-    background-color: #1f2937; border-color: #334155; color: #ffffff;
+    background-color: #1f2937; 
+    border-color: #334155; 
+    color: #ffffff;
 }
 div[data-testid="stButton"] > button[kind="primary"] {
-    background-color: #1f2937 !important; border-left: 3px solid var(--accent) !important;
-    color: #ffffff !important; font-weight: 600 !important;
+    background-color: #1f2937 !important; 
+    border-left: 3px solid var(--accent) !important;
+    color: #ffffff !important; 
+    font-weight: 600 !important;
 }
-button:focus { outline: none; box-shadow: 0 0 0 2px var(--accent-soft); }
+button:focus { 
+    outline: none; 
+    box-shadow: 0 0 0 2px var(--accent-soft); 
+}
 </style>
 """, unsafe_allow_html=True)
 
