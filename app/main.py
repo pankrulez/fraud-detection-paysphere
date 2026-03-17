@@ -80,48 +80,60 @@ class APIFraudScorer:
     def predict_proba_batch(self, df_batch: pd.DataFrame, chunk_size: int = 5000):
         all_probs = []
         
-        # 1. Define the absolute minimum required fields based on your api.py Pydantic model
-        required_keys = {
-            "customer_id": "C_BATCH", 
-            "device_id": "D_BATCH", 
-            "merchant_id": "M_BATCH",
-            "timestamp": datetime.utcnow().isoformat(), 
-            "amount": 100.0,
-            "payment_method": "upi", 
-            "merchant_category": "retail",
-            "ip_address_risk_score": 0.0, 
-            "device_trust_score": 1.0,
-            "is_international": 0, 
-            "is_weekend": 0, 
-            "past_fraud_count_customer": 0,
-            "past_disputes_customer": 0, 
-            "txn_count_last_24h": 1, 
-            "customer_tenure_days": 365, 
-            "location_change_flag": 0,
-            "otp_success_rate_customer": 1.0, 
-            "ip_address_country_match": 1,
-            "hour_of_day": 12, 
-            "day_of_week": 0, 
-            "merchant_historical_fraud_rate": 0.0,
-            "threshold": float(self.threshold)
-        }
+        # 1. Define the REQUIRED keys to match your Pydantic model exactly
+        required_keys = [
+            "customer_id", 
+            "device_id", 
+            "merchant_id", 
+            "timestamp", 
+            "amount",
+            "payment_method", 
+            "is_international", 
+            "merchant_category",
+            "ip_address_risk_score", 
+            "device_trust_score", 
+            "txn_count_last_24h",
+            "location_change_flag", 
+            "otp_success_rate_customer", 
+            "past_fraud_count_customer",
+            "past_disputes_customer", 
+            "merchant_historical_fraud_rate", 
+            "hour_of_day",
+            "day_of_week", 
+            "is_weekend", 
+            "customer_tenure_days", 
+            "ip_address_country_match"
+        ]
 
-        # 2. Robust conversion
+        # 2. Sanitize and Inject Threshold
         records = []
-        for _, row in df_batch.iterrows():
+        # Fill NaNs to prevent JSON null errors
+        df_clean = df_batch.fillna(0)
+        
+        for _, row in df_clean.iterrows():
+            # Build the record dictionary
             record = row.to_dict()
-            # Merge row data into defaults (row data takes priority)
-            sanitized_record = {**required_keys, **record}
             
-            # Force correct types for Pydantic
-            sanitized_record["amount"] = float(sanitized_record["amount"])
-            sanitized_record["threshold"] = float(self.threshold)
-            sanitized_record["hour_of_day"] = int(sanitized_record["hour_of_day"])
-            sanitized_record["day_of_week"] = int(sanitized_record.get("day_of_week", 0))
+            # Add the UI-selected threshold (CRITICAL)
+            record["threshold"] = float(self.threshold)
+            
+            # Ensure correct types to satisfy Pydantic
+            record["customer_id"] = str(record.get("customer_id", "C_BATCH"))
+            record["device_id"] = str(record.get("device_id", "D_BATCH"))
+            record["merchant_id"] = str(record.get("merchant_id", "M_BATCH"))
+            
+            # Clamp values to prevent "Out of Bounds" errors (e.g., risk score must be 0-1)
+            record["ip_address_risk_score"] = max(0.0, min(1.0, float(record.get("ip_address_risk_score", 0.0))))
+            record["device_trust_score"] = max(0.0, min(1.0, float(record.get("device_trust_score", 1.0))))
+            record["amount"] = max(0.01, float(record.get("amount", 1.0))) # Amount must be > 0
+            
+            # Only keep keys that exist in the TransactionRequest model
+            sanitized_record = {k: record[k] for k in required_keys if k in record}
+            sanitized_record["threshold"] = record["threshold"]
             
             records.append(sanitized_record)
 
-        # 3. Chunked Transmission
+        # 3. Send in Chunks
         chunks = [records[i:i + chunk_size] for i in range(0, len(records), chunk_size)]
         
         try:
@@ -132,8 +144,8 @@ class APIFraudScorer:
                     timeout=120
                 )
                 if response.status_code == 422:
-                    # This will print the exact field causing the error in your Streamlit UI
-                    st.error(f"Validation Error Detail: {response.json()}")
+                    # This will print the EXACT reason Render is rejecting the data
+                    st.error(f"❌ API Rejected Data: {response.json()}")
                     return [0.0] * len(df_batch)
                 
                 response.raise_for_status()
@@ -141,7 +153,7 @@ class APIFraudScorer:
             
             return all_probs
         except Exception as e:
-            st.error(f"Batch Error: {str(e)}")
+            st.error(f"⚠️ Batch Scoring Failed: {str(e)}")
             return [0.0] * len(df_batch)
         
     def check_api_health(self):
