@@ -122,7 +122,7 @@ def render_overview(load_sample_data_fn, scorer):
             <b>2. High Value Alert:</b> Targeted sectors: Travel and Electronics.<br>
             <b>3. System Suggestion:</b> Confidence is high ({avg_confidence*100}%); optimize manual review bands.
         </p>
-    """
+    """.strip()
     
     info_card(
         "Operational Directives",

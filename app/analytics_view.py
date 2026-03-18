@@ -103,7 +103,8 @@ def render_analytics(load_sample_data_fn, show_raw: bool, threshold: float, scor
             • <b>Model Sharpness:</b> The top 5% of highest-risk transactions account for <b>{(df.sort_values('fraud_prob', ascending=False).head(int(len(df)*0.05))['amount'].sum() / df['amount'].sum()):.1%}</b> of total transaction value.<br>
             • <b>Impact Score:</b> Current settings are preventing <b>{(saved/(saved+leakage+1e-6)):.1%}</b> of all possible capital loss in this dataset.
         </p>
-    """
+    """.strip()
+    
     info_card("Strategic Intelligence Insights", report_html, accent="warning")
 
     if show_raw:
