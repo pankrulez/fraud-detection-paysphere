@@ -254,56 +254,45 @@ def load_sample_data(n: int = 50000):
 # SIDEBAR: RISK INTELLIGENCE CONSOLE
 # ==========================================
 with st.sidebar:
-    # 1. BRANDING HEADER
-    st.markdown("""
-        <div style="text-align: center; padding: 10px 0 20px 0;">
-            <h1 style="color: #4C8BF5; margin-bottom: 0; font-size: 1.8rem;">PaySphere</h1>
-            <p style="color: #94A3B8; font-size: 0.8rem; margin-top: 0; letter-spacing: 1px;">RISK INTELLIGENCE v1.0</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    # 2. REAL-TIME API HEARTBEAT
+    # 1. COMPACT HEADER (Brand + Status)
     try:
-        # Pinging the Render FastAPI backend
         health = requests.get(f"{API_URL}/health", timeout=5)
         is_active = health.status_code == 200
-        status_text = "SYSTEM OPERATIONAL" if is_active else "LATENCY DETECTED"
-        pulse_color = "#10B981" if is_active else "#F59E0B"
-    except Exception:
+        pulse_color = "#10B981" if is_active else "#EF4444"
+    except:
         is_active = False
-        status_text = "ENGINE OFFLINE"
         pulse_color = "#EF4444"
 
     st.markdown(f"""
-        <div style="background: {pulse_color}11; border: 1px solid {pulse_color}44; 
-                    padding: 12px; border-radius: 10px; margin-bottom: 25px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <div style="width: 8px; height: 8px; background: {pulse_color}; border-radius: 50%; box-shadow: 0 0 8px {pulse_color};"></div>
-                <span style="color: {pulse_color}; font-weight: 700; font-size: 0.75rem; letter-spacing: 0.5px;">{status_text}</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <div>
+                <h2 style="color: #4C8BF5; margin: 0; font-size: 1.4rem;">PaySphere</h2>
+                <p style="color: #94A3B8; font-size: 0.65rem; margin: 0;">Risk v1.0</p>
             </div>
-            <div style="color: #94a3b8; font-size: 0.65rem; margin-top: 4px; padding-left: 16px;">
-                Endpoint: {API_URL.split('//')[-1]}
+            <div style="background: {pulse_color}22; border: 1px solid {pulse_color}; padding: 4px 10px; border-radius: 20px; display: flex; align-items: center; gap: 5px;">
+                <div style="width: 6px; height: 6px; background: {pulse_color}; border-radius: 50%; box-shadow: 0 0 5px {pulse_color};"></div>
+                <span style="color: {pulse_color}; font-size: 0.6rem; font-weight: 700;">LIVE</span>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
-    # 3. NAVIGATION LOGIC
+    st.divider()
+
+    # 2. NAVIGATION (New Professional Names)
     if "section" not in st.session_state:
         st.session_state.section = "Overview"
 
     def set_section(name):
         st.session_state.section = name
 
-    # Professional Navigation Mapping
     nav_items = [
-        {"label": "Overview", "name": "🛡️ Executive Command Center", "icon": "🛡️"},
+        {"label": "Overview", "name": "🛡️ Executive Command", "icon": "🛡️"},
         {"label": "Live Scoring", "name": "⚡ Real-Time Interceptor", "icon": "⚡"},
-        {"label": "Batch Processing", "name": "📂 Bulk Risk Assessment", "icon": "📂"},
-        {"label": "Analytics", "name": "📊 Intelligence & ROI Simulator", "icon": "📊"},
-        {"label": "Pipeline", "name": "⚙️ MLOps & Model Registry", "icon": "⚙️"}
+        {"label": "Batch Processing", "name": "📂 Bulk Assessment", "icon": "📂"},
+        {"label": "Analytics", "name": "📊 ROI Simulator", "icon": "📊"},
+        {"label": "Pipeline", "name": "⚙️ MLOps Registry", "icon": "⚙️"}
     ]
 
-    st.caption("OPERATIONAL VIEWS")
     for item in nav_items:
         is_active = st.session_state.section == item["label"]
         st.button(
@@ -317,28 +306,29 @@ with st.sidebar:
 
     st.write("---")
 
-    # 4. SYSTEM CALIBRATION (RISK CONTROLS)
+    # 3. SYSTEM CALIBRATION (Optimized for Height)
     st.caption("SYSTEM CALIBRATION")
+    
+    # We define threshold FIRST so it exists for the badges below
     threshold = st.slider(
-        "Sensitivity Threshold",
-        min_value=0.001, 
-        max_value=0.500, 
-        value=0.083, 
-        step=0.001, 
-        format="%.3f",
-        help="Adjust the decision boundary. Lower values catch more fraud but increase false positives."
+        "hidden_label",
+        min_value=0.001, max_value=0.500, value=0.083, step=0.001, 
+        label_visibility="collapsed"
     )
 
-    # Dynamic Mode Indicator
-    if threshold < 0.03:
-        st.error("🛡️ Mode: Aggressive Capture")
-    elif threshold < 0.15:
-        st.success("⚖️ Mode: Balanced")
-    else:
-        st.warning("🎯 Mode: High Precision")
+    # Now we show the Mode Badge based on the defined threshold
+    mode_text = "Aggressive" if threshold < 0.03 else "Balanced" if threshold < 0.15 else "Precision"
+    mode_color = "#ef4444" if threshold < 0.03 else "#10b981" if threshold < 0.15 else "#f59e0b"
+    
+    st.markdown(f"""
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: -5px;">
+            <span style="color: #94A3B8; font-size: 0.7rem; font-weight: 600;">ACTIVE BOUNDARY: {threshold:.3f}</span>
+            <span style="color: {mode_color}; font-size: 0.65rem; font-weight: 700; border: 1px solid {mode_color}; padding: 1px 6px; border-radius: 4px;">{mode_text.upper()}</span>
+        </div>
+    """, unsafe_allow_html=True)
 
     st.write("---")
-    show_raw = st.checkbox("🔍 Enable Detailed Manifests", False)
+    show_raw = st.checkbox("🔍 Detailed Manifests", False)
 
 # ==========
 # ROUTING
