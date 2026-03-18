@@ -51,14 +51,34 @@ A **Streamlit** dashboard designed with a "Command Center" aesthetic. It provide
 ```text
 fraud-detection-paysphere/
 ├── app/
-│   ├── main.py                 # Main Streamlit router
-│   ├── overview_view.py        # Executive Dashboard
-│   ├── live_view.py            # Real-Time Interceptor (XAI)
-│   ├── batch_view.py           # Bulk Assessment (Uploader)
-│   ├── analytics_view.py       # ROI Simulator & Intelligence
-│   ├── pipeline_view.py        # MLOps Registry & Architecture
-│   ├── ui_components.py        # Custom HTML/CSS component library
-│   └── api.py                  # FastAPI Endpoints
+│   ├── main.py                 # Main Streamlit entrypoint (router)
+│   ├── overview_view.py        # 🛡️ Executive Command Center
+│   ├── live_view.py            # ⚡ Real-Time Interceptor (XAI)
+│   ├── batch_view.py           # 📂 Bulk Risk Assessment
+│   ├── analytics_view.py       # 📊 Intelligence & ROI Simulator
+│   ├── pipeline_view.py        # ⚙️ MLOps & Model Registry
+│   ├── ui_components.py        # Custom HTML/CSS component library
+│   └── api.py                  # FastAPI Endpoints & Pydantic Contracts
+├── config/
+│   ├── config.yaml             # Data paths, model, threshold config
+│   └── logging.yaml            # Logging configuration
+├── data/
+│   ├── raw/                    # Input dataset (synthetic)
+│   ├── interim/                # Cleaned data
+│   └── processed/              # Features + predictions (test set)
+├── models/
+│   └── fraud_pipeline.joblib   # Unified Production Model Registry
+├── src/
+│   ├── data_ingestion/         # Load + validate + clean data
+│   ├── features/               # Feature engineering + SMOTE
+│   ├── modeling/               # Training pipeline & Inference Scorer
+│   ├── pipeline/               # CLI entry to run full pipeline
+│   ├── utils/                  # IO, schema validation, config utils
+│   ├── logger.py               # Structured logging
+│   └── exceptions.py           # Custom exception types
+├── tests/                      # Pytest unit tests
+├── requirements.txt
+└── README.md
 ```
 
 ---
