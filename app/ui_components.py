@@ -74,15 +74,21 @@ def info_card(title, content_html, accent="primary"):
     """
     color = ACCENT_COLORS.get(accent, accent)
     
-    with st.container(border=True):
-        st.markdown(f"""
-            <div style="border-left: 4px solid {color}; padding-left: 12px; margin-bottom: 12px;">
-                <h3 style="color: {color}; margin: 0; font-weight: 600;">{title}</h3>
-            </div>
-            <div style="padding-left: 8px; color: #e5e7eb;">
+    st.markdown(f"""
+        <div style="
+            border: 1px solid #334155; 
+            border-left: 4px solid {color}; 
+            padding: 20px; 
+            border-radius: 12px; 
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            <h3 style="color: {color}; margin: 0 0 12px 0; font-weight: 600; font-size: 1.1rem;">{title}</h3>
+            <div style="color: #e5e7eb; line-height: 1.6; font-size: 0.9rem;">
                 {content_html}
             </div>
-        """, unsafe_allow_html=True)
+        </div>
+    """, unsafe_allow_html=True)
         
 
 def render_threshold_explanation(threshold):
