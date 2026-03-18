@@ -87,7 +87,7 @@ def render_overview(load_sample_data_fn, scorer):
             values='amount',
             color='amount',
             color_continuous_scale='Turbo',
-            title="Fraud Value Distribution (High-Contrast)"
+            title="Fraud Value Distribution by Category & Payment Method"
         )
         fig_tree.update_layout(
             margin=dict(t=30, b=0, l=0, r=0),
