@@ -117,14 +117,13 @@ def render_overview(load_sample_data_fn, scorer):
     st.write("---")
     
     directives_content = f"""
-    <div style='color: #CBD5E1; font-size: 0.9rem; line-height: 1.6;'>
-        <b>1. Baseline Integrity:</b> The current fraud rate of {fraud_rate:.2%} is within established limits.<br>
-        <b>2. High Value Alert:</b> Targeted sectors: Travel and Electronics.<br>
-        <b>3. System Suggestion:</b> Confidence is high ({avg_confidence*100}%); optimize manual review bands.
-    </div>
+        <p style='color: #CBD5E1; font-size: 0.9rem; line-height: 1.6; margin: 0;'>
+            <b>1. Baseline Integrity:</b> The current fraud rate of {fraud_rate:.2%} is within established limits.<br>
+            <b>2. High Value Alert:</b> Targeted sectors: Travel and Electronics.<br>
+            <b>3. System Suggestion:</b> Confidence is high ({avg_confidence*100}%); optimize manual review bands.
+        </p>
     """
     
-    # We pass the content directly to the info_card without wrapping it in st.info
     info_card(
         "Operational Directives",
         directives_content,
