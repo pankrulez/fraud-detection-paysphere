@@ -78,7 +78,7 @@ def render_pipeline():
     steps = [
         {
             "icon": "🛡️", "title": "Data Contract", 
-            "desc": "Uses **Pydantic** models to validate 22 features. If a single field is missing or the wrong type, the API rejects the request before it hits the model."
+            "desc": "Uses <code>Pydantic</code> models to validate 22 features. If a single field is missing or the wrong type, the API rejects the request before it hits the model."
         },
         {
             "icon": "🧪", "title": "Feature Mapping", 
@@ -86,11 +86,11 @@ def render_pipeline():
         },
         {
             "icon": "🤖", "title": "RF Classifier", 
-            "desc": "The 'Champion' model. A **Random Forest** with 100 trees, optimized for recall to catch subtle fraud patterns while minimizing false alarms."
+            "desc": "The 'Champion' model. A <code>Random Forest</code> with 100 trees, optimized for recall to catch subtle fraud patterns while minimizing false alarms."
         },
         {
             "icon": "📡", "title": "API Gateway", 
-            "desc": "Exposes endpoints for single scores (/v1/score) and high-speed batching. Powered by **Uvicorn** for asynchronous task handling."
+            "desc": "Exposes endpoints for single scores (/v1/score) and high-speed batching. Powered by <code>Uvicorn</code> for asynchronous task handling."
         }
     ]
 
