@@ -113,13 +113,13 @@ def render_pipeline():
     g1, g2 = st.columns(2)
 
     with g1:
-        # We pass the raw HTML strings WITHOUT the outer <div> wrapper to fix the rogue tag issue
+        # Pure content, no wrappers.
         artifact_html = f"""
             <span style='color: #10B981; font-family: monospace;'>Model:</span> RandomForest (v1.0.0)<br>
             <span style='color: #10B981; font-family: monospace;'>Serialization:</span> Joblib Binary<br>
             <span style='color: #10B981; font-family: monospace;'>Features:</span> 22 Vectors<br>
             <span style='color: #10B981; font-family: monospace;'>Last Build:</span> {datetime.now().strftime('%Y-%m-%d')}
-        """
+        """.strip()
         info_card("Model Registry Metadata", artifact_html, accent="success")
 
     with g2:
@@ -134,10 +134,10 @@ def render_pipeline():
     # 5. LIVE TRACE LOGS
     with st.expander("📄 View Server Execution Trace"):
         st.code(f"""
-# PAYSPHERE SERVER LOGS [{datetime.now().strftime('%Y-%m-%d')}]
-[STARTUP]  Loading 'fraud_pipeline.joblib'...
-[CONTRACT] Initializing Pydantic TransactionRequest schema validation.
-[NETWORK]  CORS policies enabled for Streamlit Cloud origin.
-[HTTP]     POST /v1/batch-score -> 200 OK (Chunk size: 5000)
-[INFO]     Vectorized inference completed in 0.04s per batch.
+        # PAYSPHERE SERVER LOGS [{datetime.now().strftime('%Y-%m-%d')}]
+        [STARTUP]  Loading 'fraud_pipeline.joblib'...
+        [CONTRACT] Initializing Pydantic TransactionRequest schema validation.
+        [NETWORK]  CORS policies enabled for Streamlit Cloud origin.
+        [HTTP]     POST /v1/batch-score -> 200 OK (Chunk size: 5000)
+        [INFO]     Vectorized inference completed in 0.04s per batch.
         """, language="bash")

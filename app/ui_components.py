@@ -85,7 +85,7 @@ def info_card(title, content_html, accent="primary"):
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
             <h3 style="color: {color}; margin: 0 0 12px 0; font-weight: 600; font-size: 1.1rem;">{title}</h3>
             <div style="color: #e5e7eb; line-height: 1.6; font-size: 0.9rem;">
-                {content_html}
+                {content_html.strip()}
             </div>
         </div>
     """, unsafe_allow_html=True)
