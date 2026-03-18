@@ -96,18 +96,31 @@ def render_live_scoring(scorer, threshold: float):
         
         with c1:
             # NEW PLOT: Radar Analysis
-            # This shows how the transaction deviates across 5 key dimensions
             categories = ['Amount', 'IP Risk', 'Device Trust', 'Velocity', 'Merchant Risk']
-            # Normalize values for radar
             radar_vals = [min(1, amount/50000), ip_risk, 1-device_trust, min(1, txn_count/20), 0.15]
             
+            # Convert status_color to RGBA to avoid Plotly validation errors
+            # #ef4444 (Red) -> rgba(239, 68, 68, 0.2)
+            # #10b981 (Green) -> rgba(16, 185, 129, 0.2)
+            rgba_fill = "rgba(239, 68, 68, 0.2)" if label == 1 else "rgba(16, 185, 129, 0.2)"
+            
             fig_radar = go.Figure(data=go.Scatterpolar(
-                r=radar_vals, theta=categories, fill='toself',
-                line_color=status_color, fillcolor=f"{status_color}33"
+                r=radar_vals, 
+                theta=categories, 
+                fill='toself',
+                line_color=status_color, 
+                fillcolor=rgba_fill # Using standard RGBA string
             ))
+            
             fig_radar.update_layout(
-                polar=dict(radialaxis=dict(visible=True, range=[0, 1], gridcolor="#334155"), bgcolor="rgba(0,0,0,0)"),
-                showlegend=False, paper_bgcolor="rgba(0,0,0,0)"
+                polar=dict(
+                    radialaxis=dict(visible=True, range=[0, 1], gridcolor="#334155"), 
+                    bgcolor="rgba(0,0,0,0)",
+                    angularaxis=dict(gridcolor="#334155", linecolor="#334155")
+                ),
+                showlegend=False, 
+                paper_bgcolor="rgba(0,0,0,0)",
+                margin=dict(t=40, b=40, l=40, r=40)
             )
             chart_card("Risk Fingerprint", "Transaction profile across key fraud dimensions.", fig_radar, height=350)
 
