@@ -1,4 +1,4 @@
-# 🛡️ PaySphere: Enterprise Fraud Risk Microservice
+# 🛡️ PaySphere: Enterprise Risk Intelligence Microservice
 
 ![Pytest Status](https://github.com/pankrulez/fraud-detection-paysphere/actions/workflows/main.yml/badge.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
@@ -12,137 +12,76 @@ An asynchronous, decoupled machine learning microservice architecture designed t
 
 ## 🏗️ System Architecture: The Decoupled Approach
 
-Unlike standard monolithic ML projects, PaySphere is architected as a **distributed system** to mimic a real-world production environment.
+PaySphere is architected as a **distributed system** to mimic a mission-critical fintech environment. 
 
 
 
 ### 1. The Brain (Inference API)
 A **FastAPI** service hosted on **Render**. It serves a unified Scikit-Learn pipeline, handling:
-- **Real-time Scoring:** Single-row latency optimized for checkout flows.
-- **Vectorized Batching:** A dedicated endpoint that reduced dashboard loading from **45s to 1.8s** by eliminating the N+1 API request problem.
+- **Vectorized Batching:** A dedicated endpoint that reduced dashboard loading from **45s to 1.8s** by utilizing NumPy-backed vectorized scoring.
+- **Pydantic Data Contracts:** Strict schema validation on 22 feature vectors to ensure 0% training-serving skew.
 
-### 2. The Face (Risk Dashboard)
-A **Streamlit** application hosted on **Streamlit Cloud**. It consumes the API to provide:
-- **Executive KPIs:** Outlier analysis and financial risk distribution.
-- **Explainable AI:** Real-time Waterfall charts showing feature-level mathematical drivers for every decision.
-
-### 3. The Governance (Logging & Tests)
-- **Structured Logging:** A `logging.yaml` configuration with dual-handlers for console and file-based "Fraud Audit Trails."
-- **Pytest Suite:** 100% pass rate on core logic, including **Data Leakage Protection** tests for velocity features.
+### 2. The Face (Risk Intelligence Console)
+A **Streamlit** dashboard designed with a "Command Center" aesthetic. It provides:
+- **Financial ROI Simulation:** Real-time analysis of "Fraud Saved" vs. "Customer Friction" costs.
+- **Risk Fingerprinting:** Radar-based behavioral diagnostics and Waterfall XAI (Explainable AI).
 
 ---
 
-## 🖥️ Dashboard Features
+## 🖥️ Operational Terminal Views
 
-![App Dashboard](reports/dashboard.png)
-
-1. **Executive Overview:** High-level fraud KPIs and log-scaled financial outlier detection.
-2. **Live Scoring:** Simulate transactions with real-time API feedback and **Waterfall XAI** explaining the "Why" behind every score.
-3. **Analytics:** High-speed scoring of 500+ transactions with Precision-Recall curves and Financial Cost-Benefit Simulators. 
-4. **Pipeline:** Live inspection of the production artifact status, algorithm metadata, and feature counts.
+1. **🛡️ Executive Command Center:** High-level system health metrics and high-contrast (Turbo) risk concentration heatmaps.
+2. **⚡ Real-Time Interceptor:** A diagnostic terminal for manual transaction overrides with real-time probability gauges and XAI.
+3. **📂 Bulk Risk Assessment:** High-speed manifest scoring (up to 5,000 txns/chunk) with data-exfiltration (CSV export) capabilities.
+4. **📊 Intelligence & ROI Simulator:** Strategic impact modeling. It visualizes the trade-off between security (Fraud Capture) and revenue (False Positives).
+5. **⚙️ MLOps & Model Registry:** Technical lineage of the production artifact, metadata tracking, and live system audit logs.
 
 ---
 
-## 🧱 Project Architecture
+## 🧠 Technical Performance & Engineering
+
+- **Imbalance Mastery:** Utilized **SMOTE** (Synthetic Minority Over-sampling Technique) to handle the 0.5% fraud minority class, prioritizing **Precision-Recall AUC** over traditional accuracy.
+- **Leakage-Proof Engineering:** Feature engineering for velocity (`txn_count_last_24h`) uses expanding windows to prevent temporal data leakage.
+- **Explainable AI (XAI):** Implemented marginal feature substitution via the API proxy to provide a waterfall breakdown of mathematical "Decision Drivers."
+
+---
+
+## 🧱 Project Structure
 
 ```text
 fraud-detection-paysphere/
 ├── app/
-│   ├── app.py                  # Main Streamlit entrypoint (router)
-│   ├── overview_view.py        # Executive KPIs & Outlier Analysis
-│   ├── live_view.py            # Live scoring with Explainable AI (Waterfall)
-│   ├── analytics_view.py       # ML Curves, Feature Drivers & Fin-Simulator
-│   ├── pipeline_view.py        # Architecture details & Model Registry
-│   ├── ui_components.py        # Native Streamlit card components & styling
-│   └── api.py                  # FastAPI Endpoints & Pydantic Contracts
-├── config/
-│   ├── config.yaml             # Data paths, model, threshold config
-│   └── logging.yaml            # Logging configuration
-├── data/
-│   ├── raw/                    # Input dataset (synthetic)
-│   ├── interim/                # Cleaned data
-│   └── processed/              # Features + predictions (test set)
-├── models/
-│   ├── artifacts/
-│       └── fraud_pipeline.joblib  # Unified .joblib Pipeline Registry
-├── notebooks/
-│   ├── 01_eda.ipynb            # Exploratory Data Analysis
-│   ├── 02_feature_dev.ipynb    # Feature Engineering
-│   └── 03_threshold_tuning.ipynb  # Features + predictions (test set)
-├── src/
-│   ├── data_ingestion/         # Load + validate + clean data
-│   ├── features/               # Feature engineering + SMOTE
-│   ├── modeling/               # Training pipeline & Inference Scorer
-│   ├── pipeline/               # CLI entry to run full pipeline
-│   ├── utils/                  # IO, schema validation, config utils
-│   ├── logger.py               # Structured logging
-│   └── exceptions.py           # Custom exception types
-├── tests/                      # Pytest unit tests
-├── requirements.txt
-└── README.md
+│   ├── main.py                 # Main Streamlit router
+│   ├── overview_view.py        # Executive Dashboard
+│   ├── live_view.py            # Real-Time Interceptor (XAI)
+│   ├── batch_view.py           # Bulk Assessment (Uploader)
+│   ├── analytics_view.py       # ROI Simulator & Intelligence
+│   ├── pipeline_view.py        # MLOps Registry & Architecture
+│   ├── ui_components.py        # Custom HTML/CSS component library
+│   └── api.py                  # FastAPI Endpoints
 ```
-
----
-
-## 🧠 Technical Performance Highlights
-
-- **Leakage-Proof Engineering**: Velocity features (`txn_count_last_24h`) use expanding windows and `.shift()` to ensure the model never "peeks" into the future during training.
-
-- **Unified Pipelines**: Preprocessing (Scaling/Encoding) is baked into the `.joblib` artifact, ensuring 0% training-serving skew.
-
-- **Imbalance Mastery**: Utilized SMOTE and prioritized Precision-Recall AUC over Accuracy to handle the 0.5% fraud minority class.
 
 ---
 
 ## 📦 Run It Locally
-1️⃣ **Clone & Install Dependencies**
-
+1️⃣ Clone & Install
 ```bash
-git clone [https://github.com/](https://github.com/)<your-username>/fraud-detection-paysphere.git
-
-cd fraud-detection-paysphere
-
-python -m venv .venv
-
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+git clone [https://github.com/pankrulez/fraud-detection-paysphere.git](https://github.com/pankrulez/fraud-detection-paysphere.git)
 
 pip install -r requirements.txt
 ```
-
-2️⃣ **Execute the ML Pipeline (Train the Model)**
-
-```bash
-python -m src.pipeline.run_pipeline
-```
-This will ingest data, engineer features, apply SMOTE, train the classifier, and save the production artifacts to `/models/`.
-
-3️⃣ Start the Backend (API)
+2️⃣ Start the Backend (The Brain)
 
 ```bash
-# Serves the model at http://localhost:8000
-
 python -m uvicorn app.api:app --reload
 ```
-
-3️⃣ **Start the Frontend (UI)**
+3️⃣ Start the Frontend (The UI)
 
 ```bash
-# Connects to the API for real-time scoring
-
 streamlit run app/main.py
 ```
 
 ---
 
-## 🧪 Testing
-Run the automated test suite to verify feature engineering and inference logic:
-
-```bash
-pytest
-```
-
----
-
 ## 📄 License
-
--
+MIT License. Created by Pankaj Kapri.
