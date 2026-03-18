@@ -1,5 +1,6 @@
 import streamlit as st
 from app.ui_components import info_card
+from datetime import datetime
 
 def render_pipeline():
     # 1. LIVE SERVICE AUTHENTICATION

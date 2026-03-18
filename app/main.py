@@ -13,7 +13,7 @@ if PROJECT_ROOT not in sys.path:
 from app.overview_view import render_overview
 from app.live_view import render_live_scoring
 from app.analytics_view import render_analytics
-from app.pipeline_view import render_pipeline
+from app.pipeline_view import render_pipeline 
 from app.batch_view import render_batch_processing
 
 API_URL = st.secrets.get("API_URL", "http://localhost:8000")
