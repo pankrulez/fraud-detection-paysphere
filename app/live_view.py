@@ -1,77 +1,65 @@
-import time
-from datetime import datetime
-import pandas as pd
 import streamlit as st
-import plotly.graph_objects as go
-from app.ui_components import info_card, chart_card, render_threshold_explanation
+import plotly.express as px
+import pandas as pd
+import numpy as np
+from app.ui_components import chart_card, render_threshold_explanation
 
-def render_live_scoring(scorer, threshold: float):
-    # Header with Interceptor Identity
+def render_analytics(load_sample_data_fn, show_raw: bool, threshold: float, scorer):
+    # Header
     col_t, col_s = st.columns([3, 1])
     with col_t:
-        st.title("⚡ Live Interceptor Terminal")
-        st.caption("Manual transaction override and real-time risk diagnostic suite.")
+        st.title("📊 Business Impact Analytics")
+        st.caption("ROI Simulation and behavioral risk distribution across 25,000 samples.")
     
-    with col_s:
-        # API Handshake Pulse
-        st.markdown("""
-            <div style="background: rgba(76, 139, 245, 0.1); border: 1px solid #4C8BF5; 
-                        padding: 10px; border-radius: 8px; text-align: center;">
-                <span style="color: #4C8BF5; font-weight: 700;">PROXIED TO RENDER</span>
-            </div>
-        """, unsafe_allow_html=True)
-
     render_threshold_explanation(threshold)
     st.write("---")
 
-    # Layout: Form on Left, Diagnostic on Right
-    col_form, col_diag = st.columns([1.2, 1.8])
+    # 1. DATA PREP (Using session state to avoid re-scoring)
+    if 'scored_df' not in st.session_state:
+        with st.spinner("Scoring batch for ROI analysis..."):
+            df_raw = load_sample_data_fn()
+            sample = df_raw.head(25000).copy()
+            # In a real app, you'd call scorer.predict_proba_batch(sample) here
+            # For now, we assume probabilities exist or simulate them for the UI demo
+            sample['prob'] = scorer.predict_proba_batch(sample)
+            st.session_state.scored_df = sample
 
-    with col_form:
-        with st.form("txn_form", border=True):
-            st.subheader("Transaction Parameters")
-            amount = st.number_input("Amount (₹)", 1.0, value=12500.0)
-            payment_method = st.selectbox("Payment Method", ["UPI", "CARD", "NETBANKING", "WALLET"])
-            merchant_category = st.selectbox("Merchant Category", ["Travel", "Electronics", "Fashion", "Gaming"])
-            
-            st.divider()
-            ip_risk = st.slider("IP Reputation Risk", 0.0, 1.0, 0.85)
-            device_trust = st.slider("Device Trust Score", 0.0, 1.0, 0.20)
-            txn_count = st.number_input("Txn Count (24h)", 0, value=5)
+    df = st.session_state.scored_df
+    df['pred'] = (df['prob'] >= threshold).astype(int)
 
-            submitted = st.form_submit_button("⚡ EXECUTE RISK ANALYSIS", use_container_width=True, type="primary")
+    # 2. FINANCIAL IMPACT STRIP
+    saved = df[(df['pred'] == 1) & (df['is_fraud'] == 1)]['amount'].sum()
+    leakage = df[(df['pred'] == 0) & (df['is_fraud'] == 1)]['amount'].sum()
+    friction = df[(df['pred'] == 1) & (df['is_fraud'] == 0)]['amount'].sum()
 
-    if submitted:
-        # 1. API Call Logic (Simplified for brevity)
-        df_input = pd.DataFrame([{
-            "transaction_id": "TXN_LIVE", "amount": amount, "payment_method": payment_method.upper(),
-            "merchant_category": merchant_category, "ip_address_risk_score": ip_risk,
-            "device_trust_score": device_trust, "txn_count_last_24h": txn_count,
-            "threshold": threshold, # Sending UI threshold to API
-            # ... include other required fields from your sanitizer
-        }])
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Fraud Prevented", f"₹{saved:,.0f}", help="Total capital loss averted.")
+    m2.metric("Revenue Leakage", f"₹{leakage:,.0f}", delta="False Negatives", delta_color="inverse")
+    m3.metric("Friction Cost", f"₹{friction:,.0f}", delta="False Positives", delta_color="inverse")
 
-        label, action, prob = scorer.predict_label_and_action(df_input)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-        with col_diag:
-            # Result Banner
-            banner_color = "#ef4444" if label == 1 else "#10b981"
-            st.markdown(f"""
-                <div style="background: {banner_color}22; border: 1px solid {banner_color}; 
-                            padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <h3 style="color: {banner_color}; margin: 0;">DECISION: {action}</h3>
-                    <p style="margin: 0; color: #CBD5E1;">Probability: {prob:.2%}</p>
-                </div>
-            """, unsafe_allow_html=True)
+    # 3. TURBO HEATMAPS
+    col_left, col_right = st.columns(2)
 
-            # Diagnostic Gauge wrapped in chart_card
-            fig_g = go.Figure(go.Indicator(
-                mode="gauge+number", value=prob*100,
-                gauge={'bar': {'color': banner_color}, 'axis': {'range': [0, 100]},
-                       'threshold': {'line': {'color': "white", 'width': 2}, 'value': threshold*100}}
-            ))
-            chart_card("Risk Diagnostic", "Real-time probability score from Random Forest Engine.", fig_g, height=250)
+    with col_left:
+        # High Contrast Turbo Treemap
+        fig_tree = px.treemap(
+            df[df['prob'] > threshold], 
+            path=['merchant_category', 'payment_method'], 
+            values='amount', color='prob',
+            color_continuous_scale='Turbo',
+            title="Concentration of Blocked Capital"
+        )
+        chart_card("Risk Concentration", "Where the model is focusing its blocking strategy.", fig_tree)
 
-    # Technical Depth: Raw Payload Preview
-    with st.expander("🛠️ View API JSON Payload"):
-        st.json(df_input.to_dict(orient="records")[0])
+    with col_right:
+        # Feature Correlation with Risk
+        numeric_df = df.select_dtypes(include=[np.number])
+        corrs = numeric_df.corr()['prob'].drop(['prob', 'pred', 'is_fraud'], errors='ignore').sort_values()
+        fig_corr = px.bar(x=corrs.values, y=corrs.index, orientation='h', color=corrs.values, color_continuous_scale='Turbo')
+        chart_card("Signal Strength", "Which features are driving the high risk scores.", fig_corr)
+
+    if show_raw:
+        st.subheader("🚩 High-Risk Manifest")
+        st.dataframe(df[df['pred'] == 1].sort_values('prob', ascending=False), use_container_width=True)
