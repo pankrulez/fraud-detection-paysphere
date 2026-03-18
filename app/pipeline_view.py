@@ -32,14 +32,42 @@ def render_pipeline():
         we separate the **Frontend (UI)** from the **Intelligence (API)**.
     """)
     
-    # Explaining the flow
+    # Define the data for the 3 architectural cards
+    arch_steps = [
+        {
+            "title": "1. Client Layer (Streamlit)",
+            "color": "#3B82F6", # Blue
+            "desc": "Houses the dashboard logic and user interface. It never touches the raw model or database; it only communicates via JSON requests."
+        },
+        {
+            "title": "2. Communication (REST)",
+            "color": "#F59E0B", # Orange
+            "desc": "Uses the HTTP protocol to bridge the gap. This allows the backend to be hosted on different hardware or scaled independently as traffic grows."
+        },
+        {
+            "title": "3. Brain (FastAPI + Render)",
+            "color": "#10B981", # Green
+            "desc": "Loads the <code>.joblib</code> model into memory once. It performs the heavy mathematical inference and returns a structured risk score."
+        }
+    ]
+
+    # Render with uniform height
     c1, c2, c3 = st.columns(3)
-    with c1:
-        st.info("**1. Client Layer (Streamlit)**\n\nHouses the dashboard logic. It never touches the raw model. It only sends JSON requests.")
-    with c2:
-        st.info("**2. Communication (REST)**\n\nUses the HTTP protocol to bridge the gap. This allows the backend to be scaled independently.")
-    with c3:
-        st.info("**3. Brain (FastAPI + Render)**\n\nLoads the `.joblib` model once. It performs the heavy math and returns a structured risk score.")
+    cols = [c1, c2, c3]
+
+    for i, step in enumerate(arch_steps):
+        with cols[i]:
+            st.markdown(f"""
+                <div style="background: rgba(30, 41, 59, 0.5); padding: 20px; border-radius: 12px; 
+                            border-top: 4px solid {step['color']}; min-height: 200px; 
+                            display: flex; flex-direction: column; border-left: 1px solid #334155;
+                            border-right: 1px solid #334155; border-bottom: 1px solid #334155;">
+                    <h4 style="color: {step['color']}; margin: 0; font-size: 1.1rem;">{step['title']}</h4>
+                    <p style="color: #94A3B8; font-size: 0.85rem; margin-top: 12px; line-height: 1.5; flex-grow: 1;">
+                        {step['desc']}
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
 
     st.write("---")
 
