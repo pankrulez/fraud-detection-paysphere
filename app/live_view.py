@@ -1,65 +1,141 @@
-import streamlit as st
-import plotly.express as px
+import time
+from datetime import datetime
 import pandas as pd
-import numpy as np
-from app.ui_components import chart_card, render_threshold_explanation
+import streamlit as st
+import plotly.graph_objects as go
+import plotly.express as px
+from app.ui_components import info_card, chart_card, render_threshold_explanation
 
-def render_analytics(load_sample_data_fn, show_raw: bool, threshold: float, scorer):
-    # Header
+def render_live_scoring(scorer, threshold: float):
+    # 1. HEADER SECTION (Command Center Style)
     col_t, col_s = st.columns([3, 1])
     with col_t:
-        st.title("📊 Business Impact Analytics")
-        st.caption("ROI Simulation and behavioral risk distribution across 25,000 samples.")
+        st.title("⚡ Live Interceptor Terminal")
+        st.caption("Real-time behavioral diagnostic suite proxiied to PaySphere Risk API.")
     
+    with col_s:
+        st.markdown("""
+            <div style="background: rgba(76, 139, 245, 0.1); border: 1px solid #4C8BF5; 
+                        padding: 12px; border-radius: 10px; text-align: center;">
+                <span style="color: #4C8BF5; font-weight: 700; font-size: 0.85rem;">● TERMINAL ACTIVE</span><br>
+                <span style="color: #94a3b8; font-size: 0.7rem;">Direct API Bridge</span>
+            </div>
+        """, unsafe_allow_html=True)
+
     render_threshold_explanation(threshold)
     st.write("---")
 
-    # 1. DATA PREP (Using session state to avoid re-scoring)
-    if 'scored_df' not in st.session_state:
-        with st.spinner("Scoring batch for ROI analysis..."):
-            df_raw = load_sample_data_fn()
-            sample = df_raw.head(25000).copy()
-            # In a real app, you'd call scorer.predict_proba_batch(sample) here
-            # For now, we assume probabilities exist or simulate them for the UI demo
-            sample['prob'] = scorer.predict_proba_batch(sample)
-            st.session_state.scored_df = sample
+    # 2. INPUT & DIAGNOSTIC LAYOUT
+    col_form, col_diag = st.columns([1.2, 1.8])
 
-    df = st.session_state.scored_df
-    df['pred'] = (df['prob'] >= threshold).astype(int)
+    with col_form:
+        with st.form("txn_form", border=True):
+            st.subheader("Intercept Parameters")
+            amount = st.number_input("Amount (₹)", 1.0, value=12500.0, step=500.0)
+            payment_method = st.selectbox("Payment Rail", ["UPI", "CARD", "NETBANKING", "WALLET"])
+            merchant_category = st.selectbox("Merchant Category", ["Travel", "Electronics", "Fashion", "Gaming", "Utilities"])
+            
+            st.divider()
+            ip_risk = st.slider("IP Reputation Risk", 0.0, 1.0, 0.85)
+            device_trust = st.slider("Device Trust Score", 0.0, 1.0, 0.20)
+            txn_count = st.number_input("Txn Count (24h)", 0, value=5)
+            is_intl = st.toggle("International Transaction", value=False)
 
-    # 2. FINANCIAL IMPACT STRIP
-    saved = df[(df['pred'] == 1) & (df['is_fraud'] == 1)]['amount'].sum()
-    leakage = df[(df['pred'] == 0) & (df['is_fraud'] == 1)]['amount'].sum()
-    friction = df[(df['pred'] == 1) & (df['is_fraud'] == 0)]['amount'].sum()
+            submitted = st.form_submit_button("⚡ EXECUTE RISK ANALYSIS", use_container_width=True, type="primary")
 
-    m1, m2, m3 = st.columns(3)
-    m1.metric("Fraud Prevented", f"₹{saved:,.0f}", help="Total capital loss averted.")
-    m2.metric("Revenue Leakage", f"₹{leakage:,.0f}", delta="False Negatives", delta_color="inverse")
-    m3.metric("Friction Cost", f"₹{friction:,.0f}", delta="False Positives", delta_color="inverse")
+    if submitted:
+        # DATA PREPARATION
+        now = datetime.now()
+        df_input = pd.DataFrame([{
+            "customer_id": "C_LIVE_USR", "device_id": "D_LIVE_DEV", "merchant_id": "M_LIVE_MERCH",
+            "timestamp": now.isoformat(), "amount": float(amount),
+            "payment_method": payment_method.lower(), "merchant_category": merchant_category.lower(),
+            "ip_address_risk_score": float(ip_risk), "device_trust_score": float(device_trust),
+            "is_international": int(is_intl), "is_weekend": 1 if now.weekday() >= 5 else 0,
+            "past_fraud_count_customer": 0, "past_disputes_customer": 0,
+            "txn_count_last_24h": int(txn_count), "customer_tenure_days": 365,
+            "location_change_flag": 1 if ip_risk > 0.7 else 0,
+            "otp_success_rate_customer": 0.9, "ip_address_country_match": 1,
+            "hour_of_day": now.hour, "day_of_week": now.weekday(),
+            "merchant_historical_fraud_rate": 0.02, "threshold": float(threshold)
+        }])
 
-    st.markdown("<br>", unsafe_allow_html=True)
+        with st.spinner("Analyzing transaction vectors..."):
+            label, action, prob = scorer.predict_label_and_action(df_input)
 
-    # 3. TURBO HEATMAPS
-    col_left, col_right = st.columns(2)
+        with col_diag:
+            # Result Banner
+            status_color = "#ef4444" if label == 1 else "#10b981"
+            st.markdown(f"""
+                <div style="background: {status_color}11; border: 1px solid {status_color}; 
+                            padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 8px solid {status_color};">
+                    <h2 style="color: {status_color}; margin: 0;">{action}</h2>
+                    <p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 1.1rem;">Risk Probability: <b>{prob:.2%}</b></p>
+                </div>
+            """, unsafe_allow_html=True)
 
-    with col_left:
-        # High Contrast Turbo Treemap
-        fig_tree = px.treemap(
-            df[df['prob'] > threshold], 
-            path=['merchant_category', 'payment_method'], 
-            values='amount', color='prob',
-            color_continuous_scale='Turbo',
-            title="Concentration of Blocked Capital"
-        )
-        chart_card("Risk Concentration", "Where the model is focusing its blocking strategy.", fig_tree)
+            # A: Styled Gauge
+            fig_g = go.Figure(go.Indicator(
+                mode="gauge+number", value=prob*100,
+                number={'suffix': "%", 'font': {'color': '#F8FAFC'}},
+                gauge={
+                    'axis': {'range': [0, 100], 'tickcolor': "#334155"},
+                    'bar': {'color': status_color},
+                    'bgcolor': "rgba(0,0,0,0)",
+                    'threshold': {'line': {'color': "white", 'width': 3}, 'value': threshold*100}
+                }
+            ))
+            chart_card("Risk Probability Gauge", "Current score relative to system threshold.", fig_g, height=250)
 
-    with col_right:
-        # Feature Correlation with Risk
-        numeric_df = df.select_dtypes(include=[np.number])
-        corrs = numeric_df.corr()['prob'].drop(['prob', 'pred', 'is_fraud'], errors='ignore').sort_values()
-        fig_corr = px.bar(x=corrs.values, y=corrs.index, orientation='h', color=corrs.values, color_continuous_scale='Turbo')
-        chart_card("Signal Strength", "Which features are driving the high risk scores.", fig_corr)
+    # 3. ADVANCED EXPLAINABILITY SECTION
+    if submitted:
+        st.write("---")
+        st.subheader("🔍 Deep Diagnostic Breakdown")
+        
+        c1, c2 = st.columns(2)
+        
+        with c1:
+            # NEW PLOT: Radar Analysis
+            # This shows how the transaction deviates across 5 key dimensions
+            categories = ['Amount', 'IP Risk', 'Device Trust', 'Velocity', 'Merchant Risk']
+            # Normalize values for radar
+            radar_vals = [min(1, amount/50000), ip_risk, 1-device_trust, min(1, txn_count/20), 0.15]
+            
+            fig_radar = go.Figure(data=go.Scatterpolar(
+                r=radar_vals, theta=categories, fill='toself',
+                line_color=status_color, fillcolor=f"{status_color}33"
+            ))
+            fig_radar.update_layout(
+                polar=dict(radialaxis=dict(visible=True, range=[0, 1], gridcolor="#334155"), bgcolor="rgba(0,0,0,0)"),
+                showlegend=False, paper_bgcolor="rgba(0,0,0,0)"
+            )
+            chart_card("Risk Fingerprint", "Transaction profile across key fraud dimensions.", fig_radar, height=350)
 
-    if show_raw:
-        st.subheader("🚩 High-Risk Manifest")
-        st.dataframe(df[df['pred'] == 1].sort_values('prob', ascending=False), use_container_width=True)
+        with c2:
+            # WATERFALL XAI (Your existing logic, polished)
+            safe_baselines = {"ip_address_risk_score": 0.0, "device_trust_score": 1.0, "amount": 500.0, "txn_count_last_24h": 1}
+            df_safe = df_input.copy()
+            for f, v in safe_baselines.items(): df_safe[f] = v
+            base_prob = scorer.predict_proba(df_safe)
+            
+            impacts = {}
+            for f in safe_baselines.keys():
+                df_temp = df_safe.copy()
+                df_temp[f] = df_input[f].iloc[0]
+                impacts[f] = scorer.predict_proba(df_temp) - base_prob
+            
+            sorted_impacts = sorted(impacts.items(), key=lambda x: abs(x[1]), reverse=True)
+            x_vals = [base_prob] + [i for _, i in sorted_impacts]
+            y_labs = ["Baseline"] + [f.replace("_", " ").title()[:15] for f, _ in sorted_impacts]
+            
+            fig_wat = go.Figure(go.Waterfall(
+                orientation="h", measure=["absolute"] + ["relative"]*len(sorted_impacts),
+                y=y_labs, x=x_vals,
+                decreasing={"marker": {"color": "#10b981"}}, increasing={"marker": {"color": "#ef4444"}}
+            ))
+            fig_wat.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", yaxis=dict(autorange="reversed"))
+            chart_card("Contribution Analysis", "Mathematical weight of each feature on the final score.", fig_wat, height=350)
+
+        # Bottom Row: Technical Audit
+        with st.expander("🛠️ View API Transaction Payload"):
+            st.json(df_input.to_dict(orient="records")[0])
