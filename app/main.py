@@ -250,77 +250,95 @@ def load_sample_data(n: int = 50000):
         df = df.sample(n, random_state=42)
     return df
 
-# =========================
-# SIDEBAR NAVIGATION
-# =========================
+# ==========================================
+# SIDEBAR: RISK INTELLIGENCE CONSOLE
+# ==========================================
 with st.sidebar:
-    st.html(
-        "<div style='display:flex; align-items:center; gap:10px; font-size:18px; "
-        "font-weight:700; margin-bottom:20px; color:#e5e7eb;'>"
-        "🛡️ PaySphere Risk Engine"
-        "</div>"
-    )
+    # 1. BRANDING HEADER
+    st.markdown("""
+        <div style="text-align: center; padding: 10px 0 20px 0;">
+            <h1 style="color: #4C8BF5; margin-bottom: 0; font-size: 1.8rem;">PaySphere</h1>
+            <p style="color: #94A3B8; font-size: 0.8rem; margin-top: 0; letter-spacing: 1px;">RISK INTELLIGENCE v1.0</p>
+        </div>
+    """, unsafe_allow_html=True)
 
-    # API Health Check Indicator
+    # 2. REAL-TIME API HEARTBEAT
     try:
-        # Use the dynamic API_URL and increase timeout to 5s for Render cold starts
+        # Pinging the Render FastAPI backend
         health = requests.get(f"{API_URL}/health", timeout=5)
-        api_status = "🟢 Active & Scoring" if health.status_code == 200 else "🔴 API Error"
-        bg_color, border_color, text_color = ("#064e3b", "#047857", "#34d399") if health.status_code == 200 else ("#7f1d1d", "#991b1b", "#fca5a5")
-    except Exception as e:
-        api_status = "🔴 API Offline"
-        bg_color, border_color, text_color = ("#7f1d1d", "#991b1b", "#fca5a5")
+        is_active = health.status_code == 200
+        status_text = "SYSTEM OPERATIONAL" if is_active else "LATENCY DETECTED"
+        pulse_color = "#10B981" if is_active else "#F59E0B"
+    except Exception:
+        is_active = False
+        status_text = "ENGINE OFFLINE"
+        pulse_color = "#EF4444"
 
-    st.html(
-        f"<div style='background-color: {bg_color}; color: {text_color}; padding: 8px 12px; "
-        f"border-radius: 6px; font-size: 0.85rem; margin-bottom: 24px; border: 1px solid {border_color};'>"
-        f"<b>System Status:</b> {api_status}"
-        "</div>"
-    )
+    st.markdown(f"""
+        <div style="background: {pulse_color}11; border: 1px solid {pulse_color}44; 
+                    padding: 12px; border-radius: 10px; margin-bottom: 25px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="width: 8px; height: 8px; background: {pulse_color}; border-radius: 50%; box-shadow: 0 0 8px {pulse_color};"></div>
+                <span style="color: {pulse_color}; font-weight: 700; font-size: 0.75rem; letter-spacing: 0.5px;">{status_text}</span>
+            </div>
+            <div style="color: #94a3b8; font-size: 0.65rem; margin-top: 4px; padding-left: 16px;">
+                Endpoint: {API_URL.split('//')[-1]}
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
+    # 3. NAVIGATION LOGIC
     if "section" not in st.session_state:
         st.session_state.section = "Overview"
 
     def set_section(name):
         st.session_state.section = name
 
-    def nav_button(label, icon, key):
-        is_active = st.session_state.section == label
+    # Professional Navigation Mapping
+    nav_items = [
+        {"label": "Overview", "name": "🛡️ Executive Command Center", "icon": "🛡️"},
+        {"label": "Live Scoring", "name": "⚡ Real-Time Interceptor", "icon": "⚡"},
+        {"label": "Batch Processing", "name": "📂 Bulk Risk Assessment", "icon": "📂"},
+        {"label": "Analytics", "name": "📊 Intelligence & ROI Simulator", "icon": "📊"},
+        {"label": "Pipeline", "name": "⚙️ MLOps & Model Registry", "icon": "⚙️"}
+    ]
+
+    st.caption("OPERATIONAL VIEWS")
+    for item in nav_items:
+        is_active = st.session_state.section == item["label"]
         st.button(
-            f"{icon} {label}", key=key,
+            item["name"], 
+            key=f"nav_{item['label'].lower()}",
             type="primary" if is_active else "secondary",
-            on_click=set_section, args=(label,),
+            on_click=set_section, 
+            args=(item["label"],),
             use_container_width=True
         )
 
-    st.caption("NAVIGATION")
-    nav_button("Overview", "📋", "nav_overview")
-    nav_button("Live Scoring", "⚡", "nav_live")
-    nav_button("Batch Processing", "📂", "nav_batch")
-    nav_button("Analytics", "📊", "nav_analytics")
-    nav_button("Pipeline", "⚙️", "nav_pipeline")
-
     st.write("---")
 
-    st.caption("RISK CONTROLS")
+    # 4. SYSTEM CALIBRATION (RISK CONTROLS)
+    st.caption("SYSTEM CALIBRATION")
     threshold = st.slider(
-        "Decision Threshold",
+        "Sensitivity Threshold",
         min_value=0.001, 
-        max_value=0.5, 
+        max_value=0.500, 
         value=0.083, 
         step=0.001, 
         format="%.3f",
-        help="Lower threshold = Higher Recall (Catches more fraud, more false alarms). Higher threshold = Higher Precision (Fewer false alarms)."
+        help="Adjust the decision boundary. Lower values catch more fraud but increase false positives."
     )
 
+    # Dynamic Mode Indicator
     if threshold < 0.03:
-        st.info("Mode: Aggressive Capture", icon="🛡️")
+        st.error("🛡️ Mode: Aggressive Capture")
     elif threshold < 0.15:
-        st.success("Mode: Balanced", icon="⚖️")
+        st.success("⚖️ Mode: Balanced")
     else:
-        st.warning("Mode: High Precision", icon="🎯")
+        st.warning("🎯 Mode: High Precision")
 
-    show_raw = st.checkbox("Show Raw Data in Analytics", False)
+    st.write("---")
+    show_raw = st.checkbox("🔍 Enable Detailed Manifests", False)
 
 # ==========
 # ROUTING
