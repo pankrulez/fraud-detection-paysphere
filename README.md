@@ -1,34 +1,48 @@
-# PaySphere Online Payment Fraud Detection
+# 🛡️ PaySphere: Enterprise Risk Intelligence Microservice
 
 ![Pytest Status](https://github.com/pankrulez/fraud-detection-paysphere/actions/workflows/main.yml/badge.svg)
-![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)
-![Streamlit](https://img.shields.io/badge/Streamlit-App-FF4B4B?logo=streamlit&logoColor=white)
-![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-ML-orange?logo=scikit-learn&logoColor=white)
-![Pandas](https://img.shields.io/badge/Pandas-Data%20Analysis-150458?logo=pandas&logoColor=white)
-![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)
-![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![Render](https://img.shields.io/badge/Render-Deployed-430098?logo=render&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-Cloud-FF4B4B?logo=streamlit&logoColor=white)
+![Python 3.11](https://img.shields.io/badge/Python-3.11-blue.svg)
 
-Real-time fraud detection system for digital payments (UPI, cards, wallets).
-
-End-to-end ML pipeline → trained model → production-style artifacts → Streamlit app for live scoring.
+An asynchronous, decoupled machine learning microservice architecture designed to detect high-frequency payment fraud (UPI, Cards, Wallets) using **Vectorized Batch Inference** and **Explainable AI (XAI)**.
 
 ---
 
-## 🚀 What This Project Demonstrates
+## 🏗️ System Architecture: The Decoupled Approach
 
-- End-to-end ML pipeline (data → features → model → artifacts)
+PaySphere is architected as a **distributed system** to mimic a mission-critical fintech environment. 
 
-- Class imbalance handling (SMOTE)
 
-- Threshold-based fraud decisioning
 
-- Clean modular architecture (src/ structure)
+### 1. The Brain (Inference API)
+A **FastAPI** service hosted on **Render**. It serves a unified Scikit-Learn pipeline, handling:
+- **Vectorized Batching:** A dedicated endpoint that reduced dashboard loading from **45s to 1.8s** by utilizing NumPy-backed vectorized scoring.
+- **Pydantic Data Contracts:** Strict schema validation on 22 feature vectors to ensure 0% training-serving skew.
 
-- Artifact versioning (model + preprocessing)
+### 2. The Face (Risk Intelligence Console)
+A **Streamlit** dashboard designed with a "Command Center" aesthetic. It provides:
+- **Financial ROI Simulation:** Real-time analysis of "Fraud Saved" vs. "Customer Friction" costs.
+- **Risk Fingerprinting:** Radar-based behavioral diagnostics and Waterfall XAI (Explainable AI).
 
-- Interactive fraud analytics dashboard
+---
 
-- Unit tests with pytest
+## 🖥️ Operational Terminal Views
+
+1. **🛡️ Executive Command Center:** High-level system health metrics and high-contrast (Turbo) risk concentration heatmaps.
+2. **⚡ Real-Time Interceptor:** A diagnostic terminal for manual transaction overrides with real-time probability gauges and XAI.
+3. **📂 Bulk Risk Assessment:** High-speed manifest scoring (up to 5,000 txns/chunk) with data-exfiltration (CSV export) capabilities.
+4. **📊 Intelligence & ROI Simulator:** Strategic impact modeling. It visualizes the trade-off between security (Fraud Capture) and revenue (False Positives).
+5. **⚙️ MLOps & Model Registry:** Technical lineage of the production artifact, metadata tracking, and live system audit logs.
+
+---
+
+## 🧠 Technical Performance & Engineering
+
+- **Imbalance Mastery:** Utilized **SMOTE** (Synthetic Minority Over-sampling Technique) to handle the 0.5% fraud minority class, prioritizing **Precision-Recall AUC** over traditional accuracy.
+- **Leakage-Proof Engineering:** Feature engineering for velocity (`txn_count_last_24h`) uses expanding windows to prevent temporal data leakage.
+- **Explainable AI (XAI):** Implemented marginal feature substitution via the API proxy to provide a waterfall breakdown of mathematical "Decision Drivers."
 
 ---
 
@@ -37,155 +51,57 @@ End-to-end ML pipeline → trained model → production-style artifacts → Stre
 ```text
 fraud-detection-paysphere/
 ├── app/
-│   ├── app.py                  # Main Streamlit entrypoint (router)
-│   ├── overview_view.py        # Overview tab
-│   ├── live_view.py            # Live scoring tab
-│   ├── analytics_view.py       # Analytics & plots tab
-│   └── pipeline_view.py        # Project pipeline tab
+│   ├── main.py                 # Main Streamlit entrypoint (router)
+│   ├── overview_view.py        # 🛡️ Executive Command Center
+│   ├── live_view.py            # ⚡ Real-Time Interceptor (XAI)
+│   ├── batch_view.py           # 📂 Bulk Risk Assessment
+│   ├── analytics_view.py       # 📊 Intelligence & ROI Simulator
+│   ├── pipeline_view.py        # ⚙️ MLOps & Model Registry
+│   ├── ui_components.py        # Custom HTML/CSS component library
+│   └── api.py                  # FastAPI Endpoints & Pydantic Contracts
 ├── config/
 │   ├── config.yaml             # Data paths, model, threshold config
 │   └── logging.yaml            # Logging configuration
 ├── data/
-│   ├── raw/
-│   │   └── transactions_fraud.csv        # Input dataset (synthetic)
-│   ├── interim/
-│   │   └── transactions_clean.csv        # Cleaned data
-│   └── processed/
-│       └── transactions_features.csv     # Features + predictions (test set)
+│   ├── raw/                    # Input dataset (synthetic)
+│   ├── interim/                # Cleaned data
+│   └── processed/              # Features + predictions (test set)
 ├── models/
-│   ├── artifacts/
-│   │   └── fraud_model.joblib            # Trained model
-│   └── encoders/
-│       └── preprocessing.joblib          # Encoders / scaler
+│   └── fraud_pipeline.joblib   # Unified Production Model Registry
 ├── src/
-│   ├── data_ingestion/
-│   │   └── ingestion.py                  # Load + validate + clean data
-│   ├── features/
-│   │   └── feature_engineering.py        # Feature engineering + SMOTE
-│   ├── modeling/
-│   │   ├── train.py                      # train_pipeline()
-│   │   └── inference.py                  # FraudScorer
-│   ├── pipeline/
-│   │   └── run_pipeline.py               # CLI entry to run full pipeline
-│   ├── utils/
-│   │   ├── io_utils.py                   # read/write CSV, save models
-│   │   ├── validation_utils.py           # schema + business rule checks
-│   │   └── config_utils.py               # load YAML config
-│   ├── logger.py                         # structured logging
-│   └── exceptions.py                     # custom exception types
-├── tests/
-│   ├── test_data_ingestion.py
-│   ├── test_feature_engineering.py
-│   ├── test_model_training.py
-│   └── test_inference.py
+│   ├── data_ingestion/         # Load + validate + clean data
+│   ├── features/               # Feature engineering + SMOTE
+│   ├── modeling/               # Training pipeline & Inference Scorer
+│   ├── pipeline/               # CLI entry to run full pipeline
+│   ├── utils/                  # IO, schema validation, config utils
+│   ├── logger.py               # Structured logging
+│   └── exceptions.py           # Custom exception types
+├── tests/                      # Pytest unit tests
 ├── requirements.txt
 └── README.md
 ```
 
+---
+
 ## 📦 Run It Locally
-1️⃣ Install
-
+1️⃣ Clone & Install
 ```bash
-git clone https://github.com/<your-username>/fraud-detection-paysphere.git
-
-cd fraud-detection-paysphere
-
-python -m venv .venv
-
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+git clone [https://github.com/pankrulez/fraud-detection-paysphere.git](https://github.com/pankrulez/fraud-detection-paysphere.git)
 
 pip install -r requirements.txt
 ```
-
-2️⃣ Train Model
-
-```bash
-python -m src.pipeline.run_pipeline
-```
-
-Artifacts saved:
-
-- `models/artifacts/fraud_model.joblib`
-
-- `models/encoders/preprocessing.joblib`
-
-3️⃣ Launch App
+2️⃣ Start the Backend (The Brain)
 
 ```bash
-streamlit run app/app.py
+python -m uvicorn app.api:app --reload
 ```
-
-## 🖥 Streamlit App Features
-
-- **Live Scoring**
-
-    - Enter transaction attributes
-
-    - Get fraud probability
-
-    - Business action: ALLOW / REVIEW / BLOCK
-
-- **Fraud Analytics**
-
-    - Class distribution
-
-    - Temporal fraud patterns
-
-    - Risk signal visualization
-
-    - Behavioural insights
-
-- **Pipeline Walkthrough**
-
-    - Structured explanation of each ML stage
-
----
-
-## 🧠 Feature Engineering Highlights
-
-- Transaction velocity signals
-
-- Amount deviation from customer baseline
-
-- Device & IP risk indicators
-
-- Historical fraud patterns
-
-- Combined risk index
-
----
-
-## 📊 Model
-
-- Tree-based classifier (RandomForest)
-
-- SMOTE for imbalance
-
-- ROC AUC & PR AUC evaluation
-
-- Configurable fraud decision threshold
-
----
-
-## 🧪 Running Tests
+3️⃣ Start the Frontend (The UI)
 
 ```bash
-pytest
+streamlit run app/main.py
 ```
-Covers ingestion, feature engineering, training, and inference.
 
 ---
-
-## 📌 Future Improvements
-
-- Model explainability (SHAP)
-
-- Drift monitoring
-
-- API layer (FastAPI)
-
-- Multiple model comparison
 
 ## 📄 License
-
-MIT
+MIT License. Created by Pankaj Kapri.
