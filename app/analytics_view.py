@@ -8,7 +8,7 @@ from app.ui_components import chart_card, info_card, render_threshold_explanatio
 
 def render_analytics(load_sample_data_fn, show_raw: bool, threshold: float, scorer):
     is_online = scorer.check_api_health() if scorer else False
-    status_color = "#F59E0B" if is_online else "#EF4444"
+    status_color = "#10B981" if is_online else "#EF4444"
     status_text = "SIMULATION ACTIVE" if is_online else "SIMULATION OFFLINE"
     sub_text = "Batch Vectorized" if is_online else "API Unreachable"
     
