@@ -7,6 +7,11 @@ from datetime import datetime
 from app.ui_components import chart_card, info_card, render_threshold_explanation
 
 def render_analytics(load_sample_data_fn, show_raw: bool, threshold: float, scorer):
+    is_online = scorer.check_api_health() if scorer else False
+    status_color = "#F59E0B" if is_online else "#EF4444"
+    status_text = "SIMULATION ACTIVE" if is_online else "SIMULATION OFFLINE"
+    sub_text = "Batch Vectorized" if is_online else "API Unreachable"
+    
     # 1. HEADER & SIMULATOR STATUS
     col_t, col_s = st.columns([3, 1])
     with col_t:
@@ -14,11 +19,11 @@ def render_analytics(load_sample_data_fn, show_raw: bool, threshold: float, scor
         st.caption("Strategic impact analysis and financial risk modeling across 25,000 transaction samples.")
     
     with col_s:
-        st.markdown("""
-            <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid #F59E0B; 
+        st.markdown(f"""
+            <div style="background: {status_color}11; border: 1px solid {status_color}; 
                         padding: 12px; border-radius: 10px; text-align: center;">
-                <span style="color: #F59E0B; font-weight: 700; font-size: 0.85rem;">● SIMULATION ACTIVE</span><br>
-                <span style="color: #94a3b8; font-size: 0.7rem;">Batch Vectorized</span>
+                <span style="color: {status_color}; font-weight: 700; font-size: 0.85rem;">● {status_text}</span><br>
+                <span style="color: #94a3b8; font-size: 0.7rem;">{sub_text}</span>
             </div>
         """, unsafe_allow_html=True)
 

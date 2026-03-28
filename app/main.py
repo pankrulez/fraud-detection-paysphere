@@ -259,19 +259,48 @@ with st.sidebar:
         health = requests.get(f"{API_URL}/health", timeout=5)
         is_active = health.status_code == 200
         pulse_color = "#10B981" if is_active else "#EF4444"
+        status_label = "LIVE" if is_active else "OFFLINE"
     except:
         is_active = False
         pulse_color = "#EF4444"
+        status_label = "OFFLINE"
 
     st.markdown(f"""
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <div>
-                <h2 style="color: #4C8BF5; margin: 0; font-size: 1.4rem;">PaySphere</h2>
-                <p style="color: #94A3B8; font-size: 0.65rem; margin: 0;">Risk v1.0</p>
+                <h2 
+                    style="color: #4C8BF5; 
+                    margin: 0; 
+                    font-size: 1.4rem;">PaySphere
+                </h2>
+                <p 
+                    style="color: #94A3B8; 
+                    font-size: 0.65rem; 
+                    margin: 0;">Risk v1.0
+                </p>
             </div>
-            <div style="background: {pulse_color}22; border: 1px solid {pulse_color}; padding: 4px 10px; border-radius: 20px; display: flex; align-items: center; gap: 5px;">
-                <div style="width: 6px; height: 6px; background: {pulse_color}; border-radius: 50%; box-shadow: 0 0 5px {pulse_color};"></div>
-                <span style="color: {pulse_color}; font-size: 0.6rem; font-weight: 700;">LIVE</span>
+            <div 
+                style="background: {pulse_color}22; 
+                border: 1px solid {pulse_color}; 
+                padding: 4px 10px; 
+                border-radius: 20px; 
+                display: flex; 
+                align-items: center; 
+                gap: 5px;"
+            >
+                <div 
+                    style="width: 6px; 
+                    height: 6px; 
+                    background: {pulse_color}; 
+                    border-radius: 50%; 
+                    box-shadow: 0 0 5px {pulse_color};"
+                >
+                </div>
+                <span 
+                    style="color: {pulse_color}; 
+                    font-size: 0.6rem; 
+                    font-weight: 700;">{status_label}
+                </span>
             </div>
         </div>
     """, unsafe_allow_html=True)

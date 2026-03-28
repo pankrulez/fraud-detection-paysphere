@@ -5,6 +5,11 @@ from datetime import datetime
 from app.ui_components import info_card
 
 def render_batch_processing(scorer):
+    is_online = scorer.check_api_health() if scorer else False
+    status_color = "#10B981" if is_online else "#EF4444"
+    status_text = "UPLOADER READY" if is_online else "SYSTEM OFFLINE"
+    sub_text = "Chunked API Mode" if is_online else "Cannot Process Batch"
+    
     # 1. HEADER & STATUS
     col_t, col_s = st.columns([3, 1])
     with col_t:
@@ -12,11 +17,11 @@ def render_batch_processing(scorer):
         st.caption("High-capacity vectorized inference for transaction manifests and historical auditing.")
     
     with col_s:
-        st.markdown("""
-            <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; 
+        st.markdown(f"""
+            <div style="background: {status_color}11; border: 1px solid {status_color}; 
                         padding: 12px; border-radius: 10px; text-align: center;">
-                <span style="color: #10b981; font-weight: 700; font-size: 0.85rem;">● UPLOADER READY</span><br>
-                <span style="color: #94a3b8; font-size: 0.7rem;">Chunked API Mode</span>
+                <span style="color: {status_color}; font-weight: 700; font-size: 0.85rem;">● {status_text}</span><br>
+                <span style="color: #94a3b8; font-size: 0.7rem;">{sub_text}</span>
             </div>
         """, unsafe_allow_html=True)
 

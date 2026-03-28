@@ -26,6 +26,11 @@ def render_overview(load_sample_data_fn, scorer):
     fraud_rate = df["is_fraud"].mean()
     fraud_exposure = df[df["is_fraud"] == 1]["amount"].sum()
     avg_amount = df["amount"].mean()
+    
+    is_online = scorer.check_api_health() if scorer else False
+    status_color = "#10B981" if is_online else "#EF4444"
+    status_text = "ENGINE OPERATIONAL" if is_online else "ENGINE OFFLINE"
+    sub_text = "v1.0.0 Stable Build" if is_online else "Connection Failed"
 
     # 2. HEADER
     col_title, col_status = st.columns([3, 1])
@@ -35,10 +40,10 @@ def render_overview(load_sample_data_fn, scorer):
     
     with col_status:
         st.markdown(f"""
-            <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; 
+            <div style="background: {status_color}11; border: 1px solid {status_color}; 
                         padding: 12px; border-radius: 10px; text-align: center;">
-                <span style="color: #10b981; font-weight: 700; font-size: 0.9rem;">● ENGINE OPERATIONAL</span><br>
-                <span style="color: #94a3b8; font-size: 0.75rem;">v1.0.0 Stable Build</span>
+                <span style="color: {status_color}; font-weight: 700; font-size: 0.85rem;">● {status_text}</span><br>
+                <span style="color: #94a3b8; font-size: 0.7rem;">{sub_text}</span>
             </div>
         """, unsafe_allow_html=True)
 

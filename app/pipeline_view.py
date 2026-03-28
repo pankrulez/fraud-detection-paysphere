@@ -6,6 +6,9 @@ def render_pipeline():
     # 1. LIVE SERVICE STATUS
     scorer = st.session_state.get('api_scorer')
     is_online = scorer.check_api_health() if scorer else False
+    status_color = "#10B981" if is_online else "#EF4444"
+    status_text = "ONLINE" if is_online else "OFFLINE"
+    sub_text = "FastAPI Backend" if is_online else "Service Disconnected"
     
     col_t, col_s = st.columns([3, 1])
     with col_t:
@@ -13,13 +16,11 @@ def render_pipeline():
         st.caption("A technical deep-dive into the PaySphere Decoupled Inference Architecture.")
     
     with col_s:
-        status_color = "#10B981" if is_online else "#EF4444"
-        status_text = "ONLINE" if is_online else "OFFLINE"
         st.markdown(f"""
             <div style="background: {status_color}11; border: 1px solid {status_color}; 
                         padding: 12px; border-radius: 10px; text-align: center;">
                 <span style="color: {status_color}; font-weight: 700; font-size: 0.85rem;">● {status_text}</span><br>
-                <span style="color: #94a3b8; font-size: 0.7rem;">FastAPI Backend</span>
+                <span style="color: #94a3b8; font-size: 0.7rem;">{sub_text}</span>
             </div>
         """, unsafe_allow_html=True)
 

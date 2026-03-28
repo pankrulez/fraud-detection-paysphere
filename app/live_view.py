@@ -7,6 +7,11 @@ import plotly.express as px
 from app.ui_components import info_card, chart_card, render_threshold_explanation
 
 def render_live_scoring(scorer, threshold: float):
+    is_online = scorer.check_api_health() if scorer else False
+    status_color = "#10B981" if is_online else "#EF4444"
+    status_text = "TERMINAL ACTIVE" if is_online else "TERMINAL OFFLINE"
+    sub_text = "Direct API Bridge" if is_online else "No Connection"
+    
     # 1. HEADER SECTION (Command Center Style)
     col_t, col_s = st.columns([3, 1])
     with col_t:
@@ -14,11 +19,11 @@ def render_live_scoring(scorer, threshold: float):
         st.caption("Real-time behavioral diagnostic suite proxiied to PaySphere Risk API.")
     
     with col_s:
-        st.markdown("""
-            <div style="background: rgba(76, 139, 245, 0.1); border: 1px solid #4C8BF5; 
+        st.markdown(f"""
+            <div style="background: {status_color}11; border: 1px solid {status_color}; 
                         padding: 12px; border-radius: 10px; text-align: center;">
-                <span style="color: #4C8BF5; font-weight: 700; font-size: 0.85rem;">● TERMINAL ACTIVE</span><br>
-                <span style="color: #94a3b8; font-size: 0.7rem;">Direct API Bridge</span>
+                <span style="color: {status_color}; font-weight: 700; font-size: 0.85rem;">● {status_text}</span><br>
+                <span style="color: #94a3b8; font-size: 0.7rem;">{sub_text}</span>
             </div>
         """, unsafe_allow_html=True)
 
